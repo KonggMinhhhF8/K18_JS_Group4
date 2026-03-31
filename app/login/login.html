@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản Lý Cửa Hàng - Đăng nhập</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+    <style>
+        :root {
+            --primary-color: #3498db;
+            --dark-color: #2c3e50;
+            --bg-color: #f4f7f6;
+            --white: #ffffff;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
+
+        body {
+            background-color: var(--bg-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .login-wrapper {
+            background: var(--white);
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .login-wrapper h2 {
+            text-align: center;
+            color: var(--primary-color);
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+
+        .login-wrapper p.subtitle {
+            text-align: center;
+            color: #7f8c8d;
+            margin-bottom: 30px;
+            font-size: 0.95rem;
+        }
+
+        .input-group { margin-bottom: 20px; }
+        .input-group label { display: block; margin-bottom: 8px; color: var(--dark-color); font-weight: 600; font-size: 0.9rem; }
+        .input-group input { width: 100%; padding: 12px 15px; border: 1px solid #ddd; border-radius: 8px; font-size: 1rem; transition: border-color 0.3s; }
+        .input-group input:focus { border-color: var(--primary-color); outline: none; box-shadow: 0 0 5px rgba(52, 152, 219, 0.2); }
+
+        .login-btn { width: 100%; padding: 14px; background: var(--primary-color); color: var(--white); border: none; border-radius: 8px; font-size: 1.05rem; font-weight: bold; cursor: pointer; transition: background 0.3s; margin-top: 10px; }
+        .login-btn:hover { background: #2980b9; }
+    </style>
+</head>
+<body>
+    <div class="login-wrapper">
+        <h2>ShopAdmin</h2>
+        <p class="subtitle">Đăng nhập để vào bảng điều khiển</p>
+    
+        <form id="loginForm">
+            <div class="input-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" placeholder="Nhập email của bạn" required>
+            </div>
+    
+            <div class="input-group">
+                <label for="password">Mật khẩu</label>
+                <input type="password" id="password" placeholder="Nhập mật khẩu" required>
+            </div>
+    
+            <button type="submit" class="login-btn">Đăng nhập</button>
+        </form>
+    </div>
+
+    <script src="../js/login.js"></script>
+</body>
+</html>
