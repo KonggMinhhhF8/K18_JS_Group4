@@ -38,6 +38,8 @@ export function renderTable(tableId, configs, data) {
     if (thead) {
         // Tự bọc thêm cặp thẻ <tr> </tr>
         thead.innerHTML = `<tr>${configs.map(col => `<th>${col.label}</th>`).join('')}</tr>`;
+
+        console.log('thead', thead.innerHTML);
     }
 
     // Render Body

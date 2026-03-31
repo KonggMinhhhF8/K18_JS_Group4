@@ -12,6 +12,8 @@ window.onload = async () => {
     try {
         await login(email, password);
         const ordersData = await getOrders();
+
+        console.log(ordersData);
         await renderOrdersSummary()
         renderTable('orderTable', orderConfigs, ordersData);
     } catch (error) {
