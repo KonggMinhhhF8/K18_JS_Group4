@@ -76,7 +76,7 @@
 
   <main class="main-content">
     <div class="header-actions">
-      <a href="#" class="btn-back"><i class="fas fa-arrow-left"></i> Quay lại danh sách</a>
+      <a href="index.html" class="btn-back"><i class="fas fa-arrow-left"></i> Quay lại danh sách</a>
       <h2>Chỉnh sửa sản phẩm</h2>
     </div>
 
@@ -87,11 +87,11 @@
             <h3>Thông tin chung</h3>
             <div class="form-group">
               <label>Tên sản phẩm</label>
-              <input type="text" placeholder="Ví dụ: iPhone 15 Pro Max" value="iPhone 15 Pro Max">
+              <input type="text" id="inputName" placeholder="Ví dụ: iPhone 15 Pro Max">
             </div>
             <div class="form-group">
               <label>Mô tả sản phẩm</label>
-              <textarea rows="5" placeholder="Nhập đặc điểm nổi bật..."></textarea>
+              <textarea id="inputDescription" rows="5" placeholder="Nhập đặc điểm nổi bật..."></textarea>
             </div>
           </div>
 
@@ -100,7 +100,7 @@
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
               <div class="form-group">
                 <label>Giá bán (VNĐ)</label>
-                <input type="number" value="32500000">
+                <input type="number" id="inputPrice" placeholder="Nhập giá bán">
               </div>
               <div class="form-group">
                 <label>Giá vốn (VNĐ)</label>
@@ -110,11 +110,11 @@
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
               <div class="form-group">
                 <label>Mã SKU</label>
-                <input type="text" value="IP15PM-BLUE-256">
+                <input type="text" id="inputSku" placeholder="Ví dụ: IP15PM-BLUE-256">
               </div>
               <div class="form-group">
                 <label>Số lượng tồn kho</label>
-                <input type="number" value="45">
+                <input type="number" id="inputStock" placeholder="Nhập số lượng">
               </div>
             </div>
           </div>
@@ -135,7 +135,7 @@
             <h3>Phân loại</h3>
             <div class="form-group">
               <label>Danh mục</label>
-              <select>
+              <select id="inputCategory">
                 <option>Điện thoại</option>
                 <option>Máy tính bảng</option>
                 <option>Phụ kiện</option>
@@ -154,7 +154,7 @@
       </div>
 
       <div class="form-footer">
-        <button type="button" class="btn btn-cancel">Hủy bỏ</button>
+        <button type="button" class="btn btn-cancel" onclick="window.location.href='index.html'">Hủy bỏ</button>
         <button type="submit" class="btn btn-save">Lưu thay đổi</button>
       </div>
     </form>
@@ -172,6 +172,7 @@
     reader.readAsDataURL(event.target.files[0]);
   }
 </script>
-
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+<script src="product.js"></script>
 </body>
 </html>
