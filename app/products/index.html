@@ -1,24 +1,24 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Quản Lý Sản Phẩm | ShopAdmin</title>
-  <link rel="stylesheet" href="../static/css/products.css">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản Lý Sản Phẩm | ShopAdmin</title>
+    <link rel="stylesheet" href="../style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
 <div class="container">
-  <aside class="sidebar">
-    <h2>ShopAdmin</h2>
-    <ul>
-      <li><i class="fas fa-home"></i><a href="../index.html">Tổng quan</a></li>
-      <li class="active"><i class="fas fa-box"></i><a href="#">Sản phẩm</a></li>
-      <li><i class="fas fa-shopping-cart"></i><a href="../orders/index.html">Đơn hàng</a></li>
-      <li><i class="fas fa-users"></i><a href="../customers/index.html">Khách hàng</a> </li>
-      <li><i class="fas fa-chart-line"></i><a href="../reports/index.html">Báo cáo</a> </li>
-    </ul>
-  </aside>
+    <aside class="sidebar">
+        <h2>ShopAdmin</h2>
+        <ul>
+            <li><i class="fas fa-home"></i> Tổng quan</li>
+            <li class="active"><i class="fas fa-box"></i> Sản phẩm</li>
+            <li><i class="fas fa-shopping-cart"></i> Đơn hàng</li>
+            <li><i class="fas fa-users"></i> Khách hàng</li>
+            <li><i class="fas fa-chart-line"></i> Báo cáo</li>
+        </ul>
+    </aside>
 
   <main class="main-content">
     <header>
@@ -53,20 +53,25 @@
   </main>
 </div>
 
-<div id="productModal" class="modal">
-  <div class="modal-content">
-    <h3>Thêm sản phẩm mới</h3>
-    <form id="productForm">
-      <input type="text" placeholder="Tên sản phẩm" required>
-      <input type="text" placeholder="Giá bán" required>
-      <input type="number" placeholder="Số lượng tồn kho" required>
-      <div class="modal-buttons">
-        <button type="button" class="btn-cancel" onclick="toggleModal()">Hủy</button>
-        <button type="submit" class="btn-add">Lưu sản phẩm</button>
-      </div>
-    </form>
-  </div>
+<div id="productModal" class="modal" style="display: none">
+    <div class="modal-content">
+        <h3>Thêm sản phẩm mới</h3>
+        <form id="productForm">
+            <input type="text" id="inputName" placeholder="Tên sản phẩm" required>
+            <input type="text"   id="inputSku"      placeholder="Mã SKU" required>
+            <input type="text" id="inputPrice" placeholder="Giá bán" required>
+            <input type="number" id="inputStock" placeholder="Số lượng tồn kho" required>
+            <select id="inputCategory">
+                <option value="">-- Đang tải danh mục... --</option>
+            </select>
+            <div class="modal-buttons">
+                <button type="button" class="btn-cancel" onclick="toggleModal()">Hủy</button>
+                <button type="submit" class="btn-add">Lưu sản phẩm</button>
+            </div>
+        </form>
+    </div>
 </div>
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 <script type="module" src="../static/js/products.js"></script>
 </body>
 </html>
