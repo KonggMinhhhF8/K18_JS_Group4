@@ -72,14 +72,11 @@ async function apiDeleteProduct(id) {
 
 // Delete Product
 async function handleDelete(id, name) {
-    if (!confirm(`Bạn có chắc chắn xóa ko "${name}"?`)) return
+    if (!confirm(`Bạn có chắc chắn xóa "${name}"?`)) return
     try {
         await apiDeleteProduct(id)
-        const row = document.querySelector(`tr[data-id="${id}"]`)
-        if (row) row.remove()
-        allProducts = allProducts.filter((p) => p.id !== id)
-        updateStats(allProducts)
         alert("Xóa thành công")
+        window.location.reload() // ← reload lại để list tự fetch lại
     } catch (err) {
         alert("Lỗi khi xóa: " + err.message)
     }
@@ -112,15 +109,13 @@ async function handleCreateProduct(event) {
             remaining: parseInt(document.getElementById("inputStock").value) || 0,
             sku: document.getElementById("inputSku").value.trim() || null,
         }
-        const newProduct = await apiCreateProduct(productData)
-        allProducts.unshift(newProduct)
-        renderProductList(allProducts)
-        updateStats(allProducts)
+        await apiCreateProduct(productData)
         toggleModal()
         event.target.reset()
         alert("Thêm sản phẩm thành công")
+        window.location.reload()
     } catch (err) {
-        alert("Error " + err.message)
+        alert("Lỗi: " + err.message)
     } finally {
         submitBtn.disabled = false
         submitBtn.textContent = "Lưu sản phẩm"
@@ -198,22 +193,14 @@ async function handleSaveProduct(event) {
     saveBtn.textContent = "Saving..."
 
     try {
-        let imageId = null
-        const fileInput = document.getElementById("fileInput")
-        if (fileInput && fileInput.files.length > 0) {
-            const imageRes = await apiUploadImage(fileInput.files[0])
-            imageId = imageRes.id
-        }
+
         const productData = {
             name: document.getElementById("inputName").value.trim(),
             categoryId: parseInt(document.getElementById("inputCategory").value),
             price: parseInt(document.getElementById("inputPrice").value) || 0,
             remaining: parseInt(document.getElementById("inputStock").value) || 0,
             sku: document.getElementById("inputSku").value.trim() || null,
-            description:
-                document.getElementById("inputDescription")?.value.trim() || null,
         }
-        if (imageId) productData.imageId = imageId
 
         if (isEditing) {
             await apiUpdateProduct(editId, productData)
@@ -234,18 +221,8 @@ async function handleSaveProduct(event) {
 
 //  LOAD PAGE
 document.addEventListener("DOMContentLoaded", async function () {
-    // devSetToken()
     const tbody = document.getElementById("productTableBody")
     if (tbody) {
-        loadProductList()
-
-        const searchInput = document.getElementById("searchInput")
-        if (searchInput) {
-            searchInput.addEventListener("input", function () {
-                handleSearch(this.value)
-            })
-        }
-
         const createForm = document.getElementById("productForm")
         if (createForm) {
             createForm.addEventListener("submit", handleCreateProduct)
