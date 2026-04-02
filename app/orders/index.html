@@ -21,15 +21,18 @@
     </ul>
   </aside>
 
-  <main class="main-content">
-    <header>
-      <div class="search-bar">
-          <label>
-              <input type="text" placeholder="Tìm mã đơn, tên khách hàng...">
-          </label>
-      </div>
-      <button class="btn-export"><i class="fas fa-download"></i> Xuất Excel</button>
-    </header>
+    <main class="main-content">
+        <header>
+            <div class="search-bar">
+                <input type="text" placeholder="Tìm mã đơn, tên khách hàng...">
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <button class="btn-export" style="background: var(--success);" onclick="openModal()"><i
+                        class="fas fa-plus"></i> Thêm đơn hàng
+                </button>
+                <button class="btn-export"><i class="fas fa-download"></i> Xuất Excel</button>
+            </div>
+        </header>
 
     <section class="stats" id="order-stats">
     </section>
@@ -58,6 +61,272 @@
     </section>
   </main>
 </div>
+
+<div id="orderModal" class="modal">
+    <div class="modal-content">
+        <h3 id="modalTitle">Thêm Đơn Hàng Mới</h3>
+        <form id="orderForm">
+            <input type="hidden" id="orderId">
+            <div class="form-group">
+                <label>Khách hàng</label>
+                <select id="customerId" required></select>
+            </div>
+
+            <div class="form-group">
+                <label>Sản phẩm</label>
+                <select id="productId" required></select>
+            </div>
+
+            <div class="form-group">
+                <label>Số lượng (Amount)</label>
+                <input type="number" id="orderAmount" required min="1" value="1">
+            </div>
+
+            <div class="form-group">
+                <label>Trạng thái</label>
+                <select id="orderStatus" required>
+                    <option value="pending">Chờ xử lý</option>
+                    <option value="delivering">Đang giao</option>
+                    <option value="done">Hoàn thành</option>
+                    <option value="cancel">Đã hủy</option>
+                </select>
+            </div>
+
+            <div class="modal-buttons">
+                <button type="button" class="btn-cancel" onclick="closeModal()">Hủy</button>
+                <button type="submit" class="btn-save">Lưu Đơn Hàng</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+
+<script>
+    const API_URL = 'https://k305jhbh09.execute-api.ap-southeast-1.amazonaws.com';
+    const TOKEN = localStorage.getItem('accessToken') || ''; // Cần có token thật từ màn hình đăng nhập
+
+    const apiClient = axios.create({
+      baseURL: API_URL,
+      headers: { 'Authorization': `Bearer ${TOKEN}` }
+    });
+
+    let allOrders = [];
+
+    const statusMap = {
+      'pending': { text: 'Chờ xử lý', class: 'pending' },
+      'delivering': { text: 'Đang giao', class: 'shipping' },
+      'done': { text: 'Hoàn thành', class: 'completed' },
+      'cancel': { text: 'Đã hủy', class: 'cancelled' }
+    };
+
+    async function init() {
+      try {
+        const [customersRes, productsRes] = await Promise.all([
+          apiClient.get('/customers'),
+          apiClient.get('/products')
+        ]);
+
+        populateSelect('customerId', customersRes.data, 'id', 'name');
+        populateSelect('productId', productsRes.data, 'id', 'name');
+
+        await loadOrders();
+      } catch (error) {
+        console.error("Lỗi khởi tạo:", error);
+        alert("Không thể tải dữ liệu. Vui lòng kiểm tra kết nối hoặc đăng nhập lại.");
+      }
+    }
+
+    async function loadOrders() {
+      try {
+        const response = await apiClient.get('/orders');
+        allOrders = response.data;
+
+        renderOrdersTable(allOrders);
+        updateStats(allOrders);
+      } catch (error) {
+        console.error("Lỗi tải đơn hàng:", error);
+      }
+    }
+
+    function renderOrdersTable(orders) {
+      const tbody = document.querySelector('tbody');
+      tbody.innerHTML = '';
+
+      orders.forEach(order => {
+        const customerName = order.customer ? order.customer.name : 'Khách vãng lai';
+        const customerPhone = order.customer && order.customer.phone ? order.customer.phone : 'N/A';
+        const productName = order.product ? order.product.name : 'Sản phẩm đã xóa';
+        const price = order.product ? order.product.price : 0;
+        const totalAmount = new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price * order.amount);
+
+        const statusInfo = statusMap[order.status] || { text: 'Không rõ', class: '' };
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td><strong>#ORD-${order.id}</strong></td>
+          <td>${customerName}<br><small>${customerPhone}</small></td>
+          <td>${productName} (x${order.amount})</td>
+          <td>${totalAmount}</td>
+          <td><span class="badge ${statusInfo.class}">${statusInfo.text}</span></td>
+          <td>
+            <button class="btn-action" title="Sửa đơn" onclick="editOrder(${order.id})"><i class="fas fa-edit"></i></button>
+            <button class="btn-action" style="color: var(--danger);" title="Xóa đơn" onclick="deleteOrder(${order.id})"><i class="fas fa-trash"></i></button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function updateStats(orders) {
+      const total = orders.length;
+      const pending = orders.filter(o => o.status === 'pending').length;
+      const completed = orders.filter(o => o.status === 'done').length;
+      const cancelled = orders.filter(o => o.status === 'cancel').length;
+
+      document.querySelector('.card.blue p').innerText = total;
+      document.querySelector('.card.orange p').innerText = pending;
+      document.querySelector('.card.green p').innerText = completed;
+      document.querySelector('.card.red p').innerText = cancelled;
+    }
+
+    document.getElementById('orderForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+
+      const payload = {
+        customerId: parseInt(document.getElementById('customerId').value),
+        productId: parseInt(document.getElementById('productId').value),
+        amount: parseInt(document.getElementById('orderAmount').value),
+        status: document.getElementById('orderStatus').value
+      };
+
+      const orderId = document.getElementById('orderId').value;
+
+      try {
+        if (orderId) {
+          await apiClient.put(`/orders/${orderId}`, payload);
+          alert("Cập nhật thành công!");
+        } else {
+          await apiClient.post('/orders', payload);
+          alert("Thêm đơn hàng thành công!");
+        }
+        closeModal();
+        loadOrders();
+      } catch (error) {
+        console.error("Lỗi lưu đơn hàng:", error);
+        alert("Có lỗi xảy ra khi lưu!");
+      }
+    });
+
+    async function editOrder(id) {
+      try {
+        const response = await apiClient.get('/orders');
+        const order = response.data.find(o => o.id === id);
+
+        if(order) {
+          document.getElementById('modalTitle').innerText = "Chỉnh sửa đơn hàng #" + id;
+          document.getElementById('orderId').value = order.id;
+          document.getElementById('customerId').value = order.customer ? order.customer.id : '';
+          document.getElementById('productId').value = order.product ? order.product.id : '';
+          document.getElementById('orderAmount').value = order.amount;
+          document.getElementById('orderStatus').value = order.status;
+
+          document.getElementById('orderModal').style.display = 'flex';
+        }
+      } catch (error) {
+        console.error("Lỗi lấy thông tin:", error);
+      }
+    }
+
+    async function deleteOrder(id) {
+      if(confirm(`Bạn có chắc chắn muốn xóa đơn hàng #${id} không?`)) {
+        try {
+          await apiClient.delete(`/orders/${id}`);
+          alert("Xóa thành công!");
+          loadOrders();
+        } catch (error) {
+          console.error("Lỗi xóa đơn hàng:", error);
+          alert("Không thể xóa đơn hàng này!");
+        }
+      }
+    }
+
+    function populateSelect(elementId, dataArray, valueKey, textKey) {
+      const select = document.getElementById(elementId);
+      select.innerHTML = '<option value="">-- Chọn --</option>';
+      dataArray.forEach(item => {
+        const option = document.createElement('option');
+        option.value = item[valueKey];
+        option.textContent = item[textKey];
+        select.appendChild(option);
+      });
+    }
+
+    document.querySelector('.search-bar input').addEventListener('input', function(e) {
+      const keyword = e.target.value.toLowerCase().trim();
+
+      const filteredOrders = allOrders.filter(order => {
+        const orderIdStr = `#ORD-${order.id}`.toLowerCase();
+
+        const customerName = (order.customer && order.customer.name)
+                              ? order.customer.name.toLowerCase()
+                              : '';
+
+        return orderIdStr.includes(keyword) || customerName.includes(keyword);
+      });
+
+      renderOrdersTable(filteredOrders);
+    });
+
+    const tabs = document.querySelectorAll('.tab');
+
+    tabs.forEach(tab => {
+      tab.addEventListener('click', function() {
+        tabs.forEach(t => t.classList.remove('active'));
+        this.classList.add('active');
+
+        const tabName = this.innerText.trim();
+        let filteredOrders = [];
+
+        if (tabName === 'Tất cả') {
+          filteredOrders = allOrders;
+        } else if (tabName === 'Chờ xử lý') {
+          filteredOrders = allOrders.filter(order => order.status === 'pending');
+        } else if (tabName === 'Đang giao') {
+          filteredOrders = allOrders.filter(order => order.status === 'delivering');
+        } else if (tabName === 'Đã xong') {
+          filteredOrders = allOrders.filter(order => order.status === 'done');
+        }
+
+        renderOrdersTable(filteredOrders);
+      });
+    });
+
+    document.querySelector('.date-filter input').addEventListener('change', function(e) {
+      const selectedDate = e.target.value;
+
+      if(!selectedDate) {
+          renderOrdersTable(allOrders);
+          return;
+      }
+
+      const filtered = allOrders.filter(o => o.date === selectedDate);
+      renderOrdersTable(filtered);
+    });
+
+    function openModal() {
+      document.getElementById('modalTitle').innerText = "Thêm Đơn Hàng Mới";
+      document.getElementById('orderForm').reset();
+      document.getElementById('orderId').value = '';
+      document.getElementById('orderModal').style.display = 'flex';
+    }
+
+    function closeModal() {
+      document.getElementById('orderModal').style.display = 'none';
+    }
+
+    window.addEventListener('DOMContentLoaded', init);
+</script>
 <script type="module" src="../static/js/orders.js"></script>
 </body>
 </html>
