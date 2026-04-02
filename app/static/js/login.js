@@ -23,7 +23,7 @@ async function handleLogin(email, password) {
         // 4. Lưu thẻ token và chuyển trang
         localStorage.setItem('accessToken', data.accessToken);
         alert('Đăng nhập thành công!');
-        window.location.href = '../index.html';
+        window.location.href = '../../index.html';
 
     } catch (error) {
         console.error('Lỗi khi đăng nhập:', error);
