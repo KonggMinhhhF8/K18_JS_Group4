@@ -1,44 +1,75 @@
 import axios from "https://cdn.jsdelivr.net/npm/axios@1.13.6/+esm";
+import { apiUrl } from "./base.js";
 
-const baseURL = "https://k305jhbh09.execute-api.ap-southeast-1.amazonaws.com";
+// Get base URL from apiUrl function in base.js
+const baseURL = apiUrl();
 
-// function checkAuth
+// check auth - if no token, clear refresh token - redirect to login
 export function checkAuth() {
     const token = localStorage.getItem("token");
     if (!token) {
-        window.location.href = "/app/views/login/login.html";
+        window.location.href = "/app/login/login.html";
     }
 }
 
 // Create an axios instance
-export const api = axios.create({
+const api = axios.create({
     baseURL: baseURL,
     timeout: 5000,
     headers: { "Content-Type": "application/json" },
 });
 
-// Function refreshToken
+// Refresh access token using refresh when access token expries
 async function refreshToken() {
+    const currentRefreshToken = localStorage.getItem("refreshToken");
+
+    // No refresh token found - clear storage and redirect to login
+    if (!currentRefreshToken) {
+        localStorage.removeItem("token");
+        localStorage.removeItem("refreshToken");
+        window.location.href = "/app/login/login.html";
+        throw new Error("Không có refresh token");
+    }
+
     try {
+        console.log("Refreshing token...");
         const res = await axios.post(`${baseURL}/auth/refresh-token`, {
-            refreshToken: localStorage.getItem("refreshToken"),
+            refreshToken: currentRefreshToken,
         });
+        console.log("Refresh response:", res.data);
+
+        // Save new tokens to localStorage
         localStorage.setItem("token", res.data.accessToken);
         if (res.data.refreshToken) {
             localStorage.setItem("refreshToken", res.data.refreshToken);
         }
     } catch (error) {
+        console.error(
+            "Refresh token error:",
+            error.response?.data || error.message,
+        );
+
+        // Refresh failed — clear all tokens and redirect to login
         localStorage.removeItem("token");
         localStorage.removeItem("refreshToken");
-        window.location.href = "/app/views/login/login.html";
+        window.location.href = "/app/login/login.html";
         throw error;
     }
 }
-// Interceptor
+
+// Request interceptor — automatically attach token to every request
 api.interceptors.request.use(
     function (config) {
         const token = localStorage.getItem("token");
-        if (token) config.headers.Authorization = `Bearer ${token}`;
+        if (token) {
+            config.headers.Authorization = `Bearer ${token}`;
+        }
+        console.log(
+            "Request with token:",
+            config.url,
+            config.method,
+            config.data,
+        );
         return config;
     },
     function (error) {
@@ -46,15 +77,21 @@ api.interceptors.request.use(
     },
 );
 
+//Response interceptor — handle errors from server
 api.interceptors.response.use(undefined, async (error) => {
-    if (error.response?.status === 401 && !error.config.retry) {
+    // Token expired — refresh token and retry original request (only once)
+    if (error.response?.status === 401 && !error.config?.retry) {
+        console.warn("401 Unauthorized, trying refresh...");
         error.config.retry = true;
         await refreshToken();
         return api(error.config);
     }
 
+    // Handle other server errors
     if (error.response?.status === 404) {
         alert("Không tìm thấy dữ liệu");
+    } else if (error.response?.status === 400) {
+        alert(error.response.data?.message || "Dữ liệu không hợp lệ");
     } else if (error.response?.status >= 500) {
         alert("Server lỗi");
     } else if (error.request) {
@@ -63,7 +100,7 @@ api.interceptors.response.use(undefined, async (error) => {
         alert("Lỗi hệ thống");
     }
 
-    console.log(error);
+    console.log("Response error:", error.response?.data || error.message);
 
     throw error;
 });
@@ -71,36 +108,48 @@ api.interceptors.response.use(undefined, async (error) => {
 // CRUD function
 export async function getData(endpoint) {
     try {
+        console.log("GET:", endpoint);
         const { data } = await api.get(`/${endpoint}`);
-        return { errormsg: null, data };
+        console.log("GET response:", data);
+        return { data, errormsg: null };
     } catch (error) {
-        return { errormsg: error.message, data: null };
+        console.error("GET error:", error.response?.data || error.message);
+        return { data: null, errormsg: error.message };
     }
 }
 
 export async function createData(endpoint, body) {
     try {
+        console.log("POST:", endpoint, body);
         const { data } = await api.post(`/${endpoint}`, body);
-        return { errormsg: null, data };
+        console.log("POST response:", data);
+        return { data, errormsg: null };
     } catch (error) {
-        return { errormsg: error.message, data: null };
+        console.error("POST error:", error.response?.data || error.message);
+        return { data: null, errormsg: error.message };
     }
 }
 
 export async function updateData(endpoint, body, id) {
     try {
+        console.log("PUT:", `/${endpoint}/${id}`, body);
         const { data } = await api.put(`/${endpoint}/${id}`, body);
-        return { errormsg: null, data };
+        console.log("PUT response:", data);
+        return { data, errormsg: null };
     } catch (error) {
-        return { errormsg: error.message, data: null };
+        console.error("PUT error:", error.response?.data || error.message);
+        return { data: null, errormsg: error.message };
     }
 }
 
 export async function deleteData(endpoint, id) {
     try {
+        console.log("DELETE:", `/${endpoint}/${id}`);
         const { data } = await api.delete(`/${endpoint}/${id}`);
-        return { errormsg: null, data };
+        console.log("DELETE response:", data);
+        return { data, errormsg: null };
     } catch (error) {
-        return { errormsg: error.message, data: null };
+        console.error("DELETE error:", error.response?.data || error.message);
+        return { data: null, errormsg: error.message };
     }
 }
