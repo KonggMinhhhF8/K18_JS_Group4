@@ -1,158 +1,42 @@
-// create 2026/03/28 by nguyenTokyo
+// create 2026/03/28 by nguyen_tokyo
 import {
-  checkAuth,
-  getData,
-  getDataId,
-  createData,
-  updateData,
-  deleteData,
-  setupSearch,
-  summary,
-  renderTable,
-  renderSidebar
+    checkAuth, getData, createData, updateData, deleteData,
+    setupSearch, renderTable, renderSidebar, summary
 } from "./base.js";
 
 let allProducts = [];
 
-async function getProducts() {
-  const { data, errormsg } = await getData("products");
-  if (errormsg) {
-    throw new Error(errormsg);
-  }
-  allProducts = data || [];
-  return allProducts;
-}
-
-document.addEventListener('DOMContentLoaded', async () => {
-  try {
-    checkAuth()
-    console.log(checkAuth())
-
-    renderSidebar('product'); // Sidebar dùng chung cho cả 2 trang
-
-    const tableBody = document.getElementById('productTableBody');
-    const productForm = document.getElementById("productForm");
-
-    if (tableBody) {
-
-      allProducts = await getProducts();
-
-      renderProductsSummary(allProducts);
-
-      renderTable('productTable', productConfigs, allProducts);
-
-      setupSearch('searchInput', allProducts, ['name', 'sku'], (filtered) => {
-        renderProductsSummary(filtered);
-        renderTable('productTable', productConfigs, filtered);
-      });
-
-      tableBody.addEventListener('click', async (e) => {
-        const deleteBtn = e.target.closest('.delete-btn');
-        if (deleteBtn) {
-          await handleDelete(deleteBtn.dataset.id, deleteBtn.dataset.name);
-        }
-        const editBtn = e.target.closest('.edit-btn');
-        if (editBtn) {
-          handleEdit(editBtn.dataset.id);
-        }
-      });
-    }
-
-    // Add product
-    const btnAdd = document.getElementById("btnAddProduct");
-    const btnCancel = document.querySelector(".btn-cancel");
-
-    if (btnAdd) {
-      btnAdd.addEventListener("click", async () => {
-        localStorage.removeItem("editProductId");
-        productForm.removeAttribute("data-edit-id");
-        productForm.reset();
-
-        const modalTitle = document.querySelector(".modal-content h3");
-        if (modalTitle) modalTitle.textContent = "Thêm sản phẩm mới";
-
-        document.getElementById("productModal").style.display = "flex";
-        await loadCategories();
-      });
-    }
-
-    if (btnCancel) {
-      btnCancel.addEventListener("click", () => {
-        document.getElementById("productModal").style.display = "none";
-      });
-    }
-
-    if (productForm) {
-      const editId = localStorage.getItem("editProductId");
-      if (editId) {
-        await loadEditForm();
-      } else {
-        await loadCategories();
-      }
-      productForm.addEventListener("submit", handleSaveProduct);
-    }
-  } catch (error) {
-    console.error("Lỗi khởi tạo:", error);
-  }
-});
-
-function renderProductsSummary(products) {
-  try {
-    const totalProducts = products.length;
-    const totalRemaining = products.reduce((sum, p) => sum + p.remaining,0);
-    const totalCategory = new Set(products.map(p => p.category.id)).size;
-
-    const listData = [
-      { title: "Tổng Sản Phẩm", value: totalProducts, color: "blue" },
-      { title: "Sắp hết hàng", value: totalRemaining, color: "orange" },
-      { title: "Danh mục", value: totalCategory, color: "green" }
-    ];
-
-    const stats = document.getElementById("product-Stats");
-
-    let statsHtml = "";
-
-    listData.forEach(item => {
-      statsHtml = statsHtml + summary(item.title, item.value, item.color);
-    });
-
-    stats.innerHTML = statsHtml;
-  }
-  catch (error) {
-    console.error("renderProductsSummary Error:", error);
-  }
-}
-
+// Columns Table
 const productConfigs= [
-  {
-    label: 'Hình',
-    render: (item) => {
-      const imgPath = item.imageUrl ? item.imageUrl : 'https://picsum.photos/51';
-      return `<img src="${imgPath}" alt="sp" class="img-thumb">`;
-    }
-  },
-  {
-    label: 'Thông tin sản phẩm',
-    render: (item) => `<strong>${item.name}</strong><br><small>SKU: ${item.sku || 'N/A'}</small>`
-  },
-  {
-    label: 'Danh mục',
-    render: (item) => item.category ? item.category.name : 'Chưa phân loại'
-  },
-  {
-    label: 'Giá bán',
-    render: (item) => item.price.toLocaleString('vi-VN') + 'đ'
-  },
-  {
-    label: 'Tồn kho',
-    render: (item) => {
-      const statusClass = item.remaining < 5 ? 'stock-low' : '';
-      return `<span class="${statusClass}">${item.remaining}</span>`;
-    }
-  },
-  {
-    label: 'Thao tác',
-    render: (item) => `
+    {
+        label: 'Hình',
+        render: (item) => {
+            const imgPath = item.imageUrl ? item.imageUrl : 'https://picsum.photos/51';
+            return `<img src="${imgPath}" alt="sp" class="img-thumb">`;
+        }
+    },
+    {
+        label: 'Thông tin sản phẩm',
+        render: (item) => `<strong>${item.name}</strong><br><small>SKU: ${item.sku || 'N/A'}</small>`
+    },
+    {
+        label: 'Danh mục',
+        render: (item) => item.category ? item.category.name : 'Chưa phân loại'
+    },
+    {
+        label: 'Giá bán',
+        render: (item) => item.price.toLocaleString('vi-VN') + 'đ'
+    },
+    {
+        label: 'Tồn kho',
+        render: (item) => {
+            const statusClass = item.remaining < 5 ? 'stock-low' : '';
+            return `<span class="${statusClass}">${item.remaining}</span>`;
+        }
+    },
+    {
+        label: 'Thao tác',
+        render: (item) => `
             <button class="btn-icon edit-btn" data-id="${item.id}">
                 <i class="fas fa-edit"></i>
             </button>
@@ -160,171 +44,178 @@ const productConfigs= [
                 <i class="fas fa-trash"></i>
             </button>
         `
-  }
+    }
 ];
 
-async function handleDelete(id, name) {
-  if (!confirm(`Bạn có chắc chắn muốn xóa "${name}"?`)) return;
-  try {
-    await deleteProduct(Number(id));
+document.addEventListener('DOMContentLoaded', async () => {
+    try {
+        checkAuth();
+        renderSidebar('product');
 
-    allProducts = allProducts.filter(p => p.id !== id);
+        const productForm = document.getElementById("productForm");
+        const tableBody = document.getElementById('productTableBody');
 
-    const row = document.querySelector(`.delete-btn[data-id="${id}"]`)?.closest('tr');
-    if (row) row.remove();
+        allProducts = await getProducts();
+        renderData(allProducts);
 
-    renderProductsSummary(allProducts);
+        setupSearch('searchInput', allProducts, ['name', 'sku'], renderData);
 
-    console.log(`Đã xóa sản phẩm: ${name}`);
-  } catch (err) {
-    console.error("Lỗi xóa sản phẩm:", err.message);
+        document.getElementById("btnAddProduct")?.addEventListener("click", async () => {
+            await openProductModal();
+        });
 
-    if (err.message.includes("used in some orders")) {
-      alert("Không thể xóa: Sản phẩm này đã có trong đơn hàng!");
+        document.querySelector(".btn-cancel")?.addEventListener("click", closeProductModal);
+
+        tableBody?.addEventListener('click', async (e) => {
+            const id = e.target.closest('button')?.dataset.id;
+            if (!id) return;
+
+            if (e.target.closest('.edit-btn')) {
+                await openProductModal(id);
+            }
+            if (e.target.closest('.delete-btn')) {
+                const name = e.target.closest('.delete-btn').dataset.name;
+                await handleDelete(id, name);
+            }
+        });
+
+        productForm?.addEventListener("submit", handleSaveProduct);
+
+    } catch (error) {
+        console.error("Lỗi khởi tạo:", error);
+    }
+});
+
+async function getProducts() {
+    const { data, errormsg } = await getData("products");
+    if (errormsg) throw new Error(errormsg);
+    return data || [];
+}
+
+async function openProductModal(id = null) {
+    const modal = document.getElementById("productModal");
+    const form = document.getElementById("productForm");
+    const title = document.getElementById("modalTitle");
+    const inputId = document.getElementById("inputId");
+
+    form.reset();
+
+    if (id) {
+        title.textContent = "Chỉnh sửa sản phẩm";
+        inputId.value = id;
+
+        const product = allProducts.find(p => p.id === Number(id));
+        if (product) {
+            fillForm(product);
+            await loadCategories(product.category?.id || product.categoryId);
+        }
     } else {
-      alert("Lỗi hệ thống: " + err.message);
+        title.textContent = "Thêm sản phẩm mới";
+        inputId.value = "";
+        await loadCategories();
     }
-  }
+
+    modal.style.display = "flex";
 }
 
-function handleEdit(id) {
-  localStorage.setItem("editProductId", id)
-  window.location.href = "edit.html"
-}
-
-async function loadEditForm() {
-  const form = document.getElementById("productForm")
-  if (!form) return
-
-  const editId = localStorage.getItem("editProductId")
-  const isEditing = !!editId
-
-  const title = document.querySelector(".header-actions h2")
-
-  if (title) title.textContent = isEditing ? "Sửa sản phẩm" : "Add Product"
-  try {
-    if (isEditing) {
-      const product = await getProductById(editId)
-      await loadCategories(product.category?.id)
-      fillForm(product)
-      form.setAttribute("data-edit-id", editId)
-    } else {
-      await loadCategories()
-    }
-  } catch (err) {
-    alert("Error Load Data" + err.message)
-  }
-}
-
-async function loadCategories(selectedId = null) {
-  const select = document.getElementById("inputCategory")
-  if (!select) return
-  try {
-    const response = await getData("categories")
-    const categories = response.data
-    select.innerHTML = categories
-      .map(
-        (cat) =>
-          `<option value="${cat.id}" ${cat.id === selectedId ? "selected" : ""}>
-        ${cat.name}
-        </option>`,
-      )
-      .join("")
-  } catch (err) {
-    select.innerHTML = `<option>Error Load Categories</option>`
-    console.error("Error Load Categories", err.response?.data?.message || err.message)
-  }
-}
-
-function fillForm(product) {
-  document.getElementById("inputName").value = product.name || ""
-  document.getElementById("inputPrice").value = product.price || ""
-  document.getElementById("inputStock").value = product.remaining || ""
-  document.getElementById("inputSku").value = product.sku || ""
-  const descEl = document.getElementById("inputDescription")
-  if (descEl) descEl.value = product.description || ""
-
-  if (product.imageUrl) {
-    const preview = document.getElementById("imgPreview")
-    if (preview) {
-      preview.src = product.imageUrl
-      preview.style.display = "block"
-    }
-  }
+function closeProductModal() {
+    document.getElementById("productModal").style.display = "none";
 }
 
 async function handleSaveProduct(event) {
-  event.preventDefault();
+    event.preventDefault();
+    const form = event.target;
+    const productId = document.getElementById("inputId").value;
+    const isEditing = !!productId;
+    const saveBtn = document.getElementById("btnSaveProduct");
 
-  const form = event.target;
-  const editId = form.getAttribute("data-edit-id");
-  const isEditing = !!editId;
-  const saveBtn = document.getElementById("btnSaveProduct") || form.querySelector('button[type="submit"]');
-
-  try {
     const productData = {
-      name: document.getElementById("inputName").value.trim(),
-      categoryId: parseInt(document.getElementById("inputCategory").value),
-      price: parseInt(document.getElementById("inputPrice").value) || 0,
-      remaining: parseInt(document.getElementById("inputStock").value) || 0,
-      sku: document.getElementById("inputSku").value.trim() || null
+        name: document.getElementById("inputName").value.trim(),
+        sku: document.getElementById("inputSku").value.trim(),
+        price: parseInt(document.getElementById("inputPrice").value) || 0,
+        remaining: parseInt(document.getElementById("inputStock").value) || 0,
+        categoryId: parseInt(document.getElementById("inputCategory").value)
     };
 
-    if (!productData.categoryId) {
-      alert("Vui lòng chọn danh mục sản phẩm!");
-      if (saveBtn) saveBtn.disabled = false;
-      return;
+    try {
+        saveBtn.disabled = true;
+        saveBtn.textContent = "Đang lưu...";
+
+        if (isEditing) {
+            const { data, error } = await updateData("products", productId, productData);
+            if (error) throw new Error(error);
+
+            const idx = allProducts.findIndex(p => p.id == productId);
+            if (idx !== -1) allProducts[idx] = data;
+
+            alert("Cập nhật thành công!");
+        } else {
+            const { data, error } = await createData("products", productData);
+            if (error) throw new Error(error);
+
+            allProducts.unshift(data);
+            alert("Thêm mới thành công!");
+        }
+
+        closeProductModal();
+
+        renderData(allProducts);
+
+    } catch (err) {
+        alert("Lỗi: " + err.message);
+    } finally {
+        saveBtn.disabled = false;
+        saveBtn.textContent = "Lưu sản phẩm";
     }
-
-    if (isEditing) {
-      const { error } = await updateData("products", editId, productData);
-      if (error) throw new Error(error);
-      alert("Cập nhật sản phẩm thành công!");
-    } else {
-      const { data, error } = await createData("products", productData);
-      if (error) throw new Error(error);
-
-      if (typeof allProducts !== 'undefined') {
-        allProducts.unshift(data);
-      }
-      alert("Thêm sản phẩm mới thành công!");
-    }
-
-    const modal = document.getElementById("productModal");
-
-    if (modal) {
-      modal.style.display = "none";
-      form.reset();
-      form.removeAttribute("data-edit-id");
-
-      if (typeof renderTable === "function") {
-        renderTable('productTable', productConfigs, allProducts);
-        renderProductsSummary(allProducts);
-      }
-    } else {
-      window.location.href = "index.html";
-    }
-
-  } catch (err) {
-    console.error("Lỗi khi lưu sản phẩm:", err);
-    alert("Có lỗi xảy ra: " + err.message);
-  } finally {
-    if (saveBtn) {
-      saveBtn.disabled = false;
-      saveBtn.textContent = isEditing ? "Lưu thay đổi" : "Lưu sản phẩm";
-    }
-  }
 }
 
-
-async function getProductById(id) {
-  const response = await getDataId("products", id);
-  console.log("products getDataId",response);
-  return response.data || [];
+async function loadCategories(selectedId = null) {
+    const select = document.getElementById("inputCategory");
+    try {
+        const { data } = await getData("categories");
+        select.innerHTML = `<option value="">-- Chọn danh mục --</option>` +
+            data.map(cat => `<option value="${cat.id}" ${cat.id === selectedId ? 'selected' : ''}>${cat.name}</option>`).join("");
+    } catch (err) {
+        console.error("Lỗi load danh mục:", err);
+    }
 }
 
-async function deleteProduct(id) {
-  const { data, error } = await deleteData("products", id);
-  if (error) throw new Error(error);
-  return data;
+function fillForm(p) {
+    document.getElementById("inputName").value = p.name || "";
+    document.getElementById("inputPrice").value = p.price || 0;
+    document.getElementById("inputStock").value = p.remaining || 0;
+    document.getElementById("inputSku").value = p.sku || "";
+}
+
+async function handleDelete(id, name) {
+    if (!confirm(`Bạn có chắc chắn muốn xóa "${name}"?`)) return;
+    try {
+        await deleteData("products", id);
+
+        allProducts = allProducts.filter(p => p.id != id);
+
+        renderData(allProducts);
+    } catch (err) {
+        alert("Lỗi xóa: " + err.message);
+    }
+}
+
+function renderProductsSummary(products) {
+    const stats = document.getElementById("product-Stats");
+    if (!stats) return;
+
+    const totalProducts = products.length;
+    const totalRemaining = products.reduce((sum, p) => sum + p.remaining, 0);
+    const totalCategory = new Set(products.map(p => p.category?.id || p.categoryId)).size;
+
+    stats.innerHTML =
+        summary("Tổng Sản Phẩm", totalProducts, "blue") +
+        summary("Tổng tồn kho", totalRemaining, "orange") +
+        summary("Danh mục", totalCategory, "green");
+}
+
+// Render Table
+function renderData(data) {
+    renderProductsSummary(data);
+    renderTable('productTable', productConfigs, data);
 }

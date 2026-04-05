@@ -1,5 +1,11 @@
 import { createData } from './base.js';
 
+
+const token = localStorage.getItem("accessToken");
+if (token) {
+    window.location.href = 'overviews/index.html';
+}
+
 async function login(email, password) {
     const response = await createData("auth/signin", { email, password });
     const { accessToken, refreshToken } = response.data;
