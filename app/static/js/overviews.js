@@ -1,29 +1,44 @@
 // create 2026/03/28 by nguyenTokyo
-import { apiUrl, summary, renderTable } from "./base.js";
-import api from './api.js';
+import {
+    checkAuth,
+    getData,
+    summary,
+    renderTable,
+    renderSidebar
+} from "./base.js";
 
-const API_URL_BASE = apiUrl()
 
-// Start
-window.onload = async () => {
+document.addEventListener('DOMContentLoaded', async () => {
     try {
+        const token = localStorage.getItem("accessToken");
+
+        if (!token) {
+            console.warn("Chưa đăng nhập! Đang chuyển hướng về login...");
+            window.location.href = "login.html"; //
+        }
+
+        renderSidebar('home');
+
         await renderOverview()
-        await renderRecentOrders();
+        await renderRecentOrders()
     } catch (error) {
         console.error("Lỗi hệ thống:", error);
     }
-};
+});
 
 // getOder
 async function getOrders() {
-    const response = await api.get(API_URL_BASE + "/orders");
-    return response.data;
+    const response = await getData("orders");
+    console.log("overviews",response);
+    return response.data || [];
 }
 
 async function renderOverview() {
     try {
 
         const orders = await getOrders();
+
+        console.log("renderOverview",orders);
 
         const totalRevenue = orders
             .filter(o => o.status !== 'cancel')
@@ -93,7 +108,7 @@ async function renderRecentOrders() {
         renderTable('recentOrdersTable', orderOverviewConfigs, recentOrders);
 
     } catch (error) {
-        console.error("Lỗi render bảng đơn hàng tổng quan:", error);
+        console.error("render error:", error);
     }
 }
 

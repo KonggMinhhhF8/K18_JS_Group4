@@ -9,64 +9,59 @@
 </head>
 <body>
 <div class="container">
-    <aside class="sidebar">
-        <h2>ShopAdmin</h2>
-        <ul>
-            <li><i class="fas fa-home"></i> Tổng quan</li>
-            <li class="active"><i class="fas fa-box"></i> Sản phẩm</li>
-            <li><i class="fas fa-shopping-cart"></i> Đơn hàng</li>
-            <li><i class="fas fa-users"></i> Khách hàng</li>
-            <li><i class="fas fa-chart-line"></i> Báo cáo</li>
-        </ul>
-    </aside>
+    <aside class="sidebar" id="sidebar"></aside>
 
-  <main class="main-content">
-    <header>
-      <div class="search-bar">
-        <input type="text" id="searchInput" placeholder="Tìm tên sản phẩm, mã SKU...">
-      </div>
-      <div class="user-actions">
-        <button class="btn-add" onclick="toggleModal()">Thêm sản phẩm</button>
-      </div>
-    </header>
+    <main class="main-content">
+        <header>
+          <div class="search-bar">
+              <label for="searchInput"></label>
+              <input type="text" id="searchInput" placeholder="Tìm tên sản phẩm, mã SKU...">
+          </div>
+          <div class="user-actions">
+            <button class="btn-add" id="btnAddProduct">Thêm sản phẩm</button>
+          </div>
+        </header>
 
-    <section class="stats" id="product-Stats">
-    </section>
-    <section class="table-container">
-      <div class="table-header">
-        <h3>Danh mục sản phẩm</h3>
-        <div class="filters">
-          <select>
-            <option>Tất cả danh mục</option>
-            <option>Điện thoại</option>
-            <option>Phụ kiện</option>
-          </select>
-        </div>
-      </div>
-        <table id="productable">
-            <thead>
-            </thead>
-            <tbody id="productTableBody">
-            </tbody>
-      </table>
-    </section>
-  </main>
+        <section class="stats" id="product-Stats">
+        </section>
+        <section class="table-container">
+            <div class="table-header">
+                <h3>Danh mục sản phẩm</h3>
+                <div class="filters">
+                    <label>
+                        <select>
+                            <option>Tất cả danh mục</option>
+                            <option>Điện thoại</option>
+                            <option>Phụ kiện</option>
+                        </select>
+                    </label>
+                </div>
+            </div>
+            <table id="productTable">
+                <thead>
+                </thead>
+                <tbody id="productTableBody">
+                </tbody>
+            </table>
+        </section>
+    </main>
 </div>
 
 <div id="productModal" class="modal" style="display: none">
     <div class="modal-content">
         <h3>Thêm sản phẩm mới</h3>
         <form id="productForm">
-            <input type="text" id="inputName" placeholder="Tên sản phẩm" required>
-            <input type="text"   id="inputSku"      placeholder="Mã SKU" required>
-            <input type="text" id="inputPrice" placeholder="Giá bán" required>
-            <input type="number" id="inputStock" placeholder="Số lượng tồn kho" required>
+            <label for="inputName"></label><input type="text" id="inputName" placeholder="Tên sản phẩm" required>
+            <label for="inputSku"></label><input type="text" id="inputSku" placeholder="Mã SKU" required>
+            <label for="inputPrice"></label><input type="text" id="inputPrice" placeholder="Giá bán" required>
+            <label for="inputStock"></label><input type="number" id="inputStock" placeholder="Số lượng tồn kho" required>
+            <label for="inputCategory"></label>
             <select id="inputCategory">
                 <option value="">-- Đang tải danh mục... --</option>
             </select>
             <div class="modal-buttons">
-                <button type="button" class="btn-cancel" onclick="toggleModal()">Hủy</button>
-                <button type="submit" class="btn-add">Lưu sản phẩm</button>
+                <button type="button" class="btn-cancel">Hủy</button>
+                <button type="submit" class="btn-add" id="btnSaveProduct">Lưu sản phẩm</button>
             </div>
         </form>
     </div>

@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản Lý Cửa Hàng - Fixed Header Table</title>
+    <link rel="stylesheet" href="../static/css/overviews.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+
+    <div class="overlay" id="overlay"></div>
+    <div class="container">
+        <aside class="sidebar" id="sidebar"></aside>
+        <main class="main-content">
+        <header>
+          <button class="menu-btn" id="menuToggle"><i class="fas fa-bars"></i></button>
+          <div class="user"><strong>Admin</strong> <i class="fas fa-user-circle"></i></div>
+        </header>
+
+        <section class="stats" id="overview-stats">
+        </section>
+
+        <section class="table-section">
+          <div class="table-title">
+            <h3>Đơn hàng gần đây</h3>
+          </div>
+          <div class="table-wrapper">
+            <table id="recentOrdersTable">
+              <thead>
+              </thead>
+              <tbody>
+              </tbody>
+            </table>
+          </div>
+        </section>
+        </main>
+    </div>
+
+    <script>
+      const menuToggle = document.getElementById('menuToggle');
+      const sidebar = document.getElementById('sidebar');
+      const overlay = document.getElementById('overlay');
+
+      function toggleMenu() {
+        sidebar.classList.toggle('active');
+        overlay.classList.toggle('active');
+      }
+
+      menuToggle.addEventListener('click', toggleMenu);
+      overlay.addEventListener('click', toggleMenu);
+    </script>
+    <script type="module" src="../static/js/overviews.js"></script>
+</body>
+</html>
