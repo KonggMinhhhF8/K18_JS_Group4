@@ -4,6 +4,7 @@ import {
     setupSearch, renderTable, renderSidebar, summary
 } from "./base.js";
 
+
 let allProducts = [];
 
 // Columns Table
