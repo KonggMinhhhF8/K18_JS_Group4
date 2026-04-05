@@ -20,6 +20,6 @@ if (loginForm) {
         const email = document.getElementById('email').value;
         const password = document.getElementById('password').value;
         await login(email, password);
-        window.location.href = 'index.html';
+        window.location.href = 'overviews/index.html';
     });
 }

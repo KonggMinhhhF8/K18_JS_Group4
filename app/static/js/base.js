@@ -146,11 +146,11 @@ export function renderTable(tableId, configs, data) {
 }
 
 const categories = [
-    { path: '../index.html', icon: 'fa-home', text: 'Tổng quan', name: 'home' },
-    { path: '../app/products/index.html', icon: 'fa-box', text: 'Sản phẩm', name: 'product' },
-    { path: '../app/orders/index.html', icon: 'fa-shopping-bag', text: 'Đơn hàng', name: 'order' },
-    { path: '../app/customers/index.html', icon: 'fa-users', text: 'Khách hàng', name: 'customer' },
-    { path: '../app/reports/index.html', icon: 'fa-users', text: 'Báo cáo', name: 'report' }
+    { path: '../overviews/index.html', icon: 'fa-home', text: 'Tổng quan', name: 'home' },
+    { path: '../products/index.html', icon: 'fa-box', text: 'Sản phẩm', name: 'product' },
+    { path: '../orders/index.html', icon: 'fa-shopping-bag', text: 'Đơn hàng', name: 'order' },
+    { path: '../customers/index.html', icon: 'fa-users', text: 'Khách hàng', name: 'customer' },
+    { path: '../reports/index.html', icon: 'fa-chart-line', text: 'Báo cáo', name: 'report' }
 ];
 
 export const renderSidebar = (currentPageName) => {
@@ -176,9 +176,21 @@ export const renderSidebar = (currentPageName) => {
         liE.onclick = () => {
             window.location.href = category.path;
         };
-
         ulE.append(liE);
     });
+
+    const logoutLi = document.createElement('li');
+    logoutLi.classList.add('logout-item');
+    logoutLi.innerHTML = `<i class="fas fa-sign-out-alt"></i> Đăng xuất`;
+
+    logoutLi.onclick = () => {
+        if (confirm("Bạn có chắc chắn muốn đăng xuất không?")) {
+            localStorage.removeItem("accessToken");
+            localStorage.removeItem("refreshToken");
+            window.location.href = '../login.html';
+        }
+    };
+    ulE.append(logoutLi);
 
     sidebarMenuE.append(ulE);
 };
