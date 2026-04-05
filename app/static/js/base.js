@@ -88,7 +88,7 @@ const handleRequest = async (promise) => {
 export const getData = (endpoint) => handleRequest(api.get(`/${endpoint}`));
 export const getDataId = (endpoint, id) => handleRequest(api.get(`/${endpoint}/${id}`));
 export const createData = (endpoint, body) => handleRequest(api.post(`/${endpoint}`, body));
-export const updateData = (endpoint, body, id) => handleRequest(api.put(`/${endpoint}/${id}`, body));
+export const updateData = (endpoint, id, body) => handleRequest(api.put(`/${endpoint}/${id}`, body));
 export const deleteData = (endpoint, id) => handleRequest(api.delete(`/${endpoint}/${id}`));
 
 // summary Function
@@ -183,8 +183,41 @@ export const renderSidebar = (currentPageName) => {
     sidebarMenuE.append(ulE);
 };
 
+export const checkAuth = () => {
+    const token = localStorage.getItem("accessToken");
+    if (!token) {
+        console.warn("Chưa đăng nhập! Đang chuyển hướng về login...");
+        window.location.href = "../login.html"; //
+        return false;
+    }
+    return true;
+};
 
+/**
+ * @param {String} inputId - ID của ô input tìm kiếm (vd: 'searchInput')
+ * @param {Array} data - Mảng dữ liệu gốc (allProducts, allOrders...)
+ * @param {Array} fields - Các trường muốn tìm (vd: ['name', 'sku'])
+ * @param {Function} callback - Hàm xử lý sau khi lọc (thường là renderTable)
+ */
+export const setupSearch = (inputId, data, fields, callback) => {
+    const searchInput = document.getElementById(inputId);
+    if (!searchInput) return;
 
+    // Lắng nghe sự kiện 'input' (chạy ngay khi gõ hoặc xóa chữ)
+    searchInput.addEventListener('input', (e) => {
+        const value = e.target.value.toLowerCase().trim();
 
+        const filteredData = data.filter(item => {
+            return fields.some(field => {
+                // Hỗ trợ cả dữ liệu lồng nhau như item.category.name
+                const fieldValue = field.split('.').reduce((obj, key) => obj?.[key], item);
+                return String(fieldValue || "").toLowerCase().includes(value);
+            });
+        });
+
+        // Trả kết quả về cho hàm vẽ bảng
+        callback(filteredData);
+    });
+};
 
 

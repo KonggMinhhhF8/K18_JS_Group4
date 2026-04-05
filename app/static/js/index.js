@@ -1,5 +1,6 @@
 // create 2026/03/28 by nguyenTokyo
 import {
+    checkAuth,
     getData,
     summary,
     renderTable,
@@ -9,6 +10,13 @@ import {
 
 document.addEventListener('DOMContentLoaded', async () => {
     try {
+        const token = localStorage.getItem("accessToken");
+
+        if (!token) {
+            console.warn("Chưa đăng nhập! Đang chuyển hướng về login...");
+            window.location.href = "login.html"; //
+        }
+
         renderSidebar('home');
 
         await renderOverview()

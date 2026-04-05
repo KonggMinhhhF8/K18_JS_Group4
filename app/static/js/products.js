@@ -1,10 +1,12 @@
 // create 2026/03/28 by nguyenTokyo
 import {
+    checkAuth,
     getData,
     getDataId,
     createData,
     updateData,
     deleteData,
+    setupSearch,
     summary,
     renderTable,
     renderSidebar
@@ -12,7 +14,7 @@ import {
 
 let allProducts = [];
 
-async function loadProductsData() {
+async function getProducts() {
     const { data, errormsg } = await getData("products");
     if (errormsg) {
         throw new Error(errormsg);
@@ -23,16 +25,26 @@ async function loadProductsData() {
 
 document.addEventListener('DOMContentLoaded', async () => {
     try {
+        checkAuth()
+        console.log(checkAuth())
+
         renderSidebar('product'); // Sidebar dùng chung cho cả 2 trang
 
         const tableBody = document.getElementById('productTableBody');
         const productForm = document.getElementById("productForm");
 
         if (tableBody) {
-            console.log("Đang ở trang Danh sách");
-            allProducts = await loadProductsData();
+
+            allProducts = await getProducts();
+
             renderProductsSummary(allProducts);
+
             renderTable('productTable', productConfigs, allProducts);
+
+            setupSearch('searchInput', allProducts, ['name', 'sku'], (filtered) => {
+                renderProductsSummary(filtered);
+                renderTable('productTable', productConfigs, filtered);
+            });
 
             tableBody.addEventListener('click', async (e) => {
                 const deleteBtn = e.target.closest('.delete-btn');
@@ -46,24 +58,45 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
         }
 
-        else if (productForm) {
-            console.log("Đang ở trang Form - Tiến hành load dữ liệu Edit");
-            await loadEditForm();
+        // Add product
+        const btnAdd = document.getElementById("btnAddProduct");
+        const btnCancel = document.querySelector(".btn-cancel");
+
+        if (btnAdd) {
+            btnAdd.addEventListener("click", async () => {
+                localStorage.removeItem("editProductId");
+                productForm.removeAttribute("data-edit-id");
+                productForm.reset();
+
+                const modalTitle = document.querySelector(".modal-content h3");
+                if (modalTitle) modalTitle.textContent = "Thêm sản phẩm mới";
+
+                document.getElementById("productModal").style.display = "flex";
+                await loadCategories();
+            });
+        }
+
+        if (btnCancel) {
+            btnCancel.addEventListener("click", () => {
+                document.getElementById("productModal").style.display = "none";
+            });
+        }
+
+        if (productForm) {
+            const editId = localStorage.getItem("editProductId");
+            if (editId) {
+                await loadEditForm();
+            } else {
+                await loadCategories();
+            }
             productForm.addEventListener("submit", handleSaveProduct);
         }
+
 
     } catch (error) {
         console.error("Lỗi khởi tạo:", error);
     }
 });
-
-
-// getProducts
-async function getProducts() {
-    const response = await getData("products");
-    console.log("overviews",response);
-    return response.data || [];
-}
 
 function renderProductsSummary(products) {
     try {
@@ -88,7 +121,7 @@ function renderProductsSummary(products) {
         stats.innerHTML = statsHtml;
     }
     catch (error) {
-        // console.error("renderProductsSummary Error:", error);
+        console.error("renderProductsSummary Error:", error);
     }
 }
 
@@ -137,7 +170,7 @@ async function handleDelete(id, name) {
     try {
         await deleteProduct(Number(id));
 
-        allProducts = allProducts.filter(p => p.id != id);
+        allProducts = allProducts.filter(p => p.id !== id);
 
         const row = document.querySelector(`.delete-btn[data-id="${id}"]`)?.closest('tr');
         if (row) row.remove();
@@ -156,35 +189,9 @@ async function handleDelete(id, name) {
     }
 }
 
-async function getProductById(id) {
-    const response = await getDataId("products/" + id);
-    console.log("products getDataId",response);
-    return response.data || [];
-}
-
-// POST
-async function createProduct(productData) {
-    const response = await getDataId("products", productData);
-    console.log("products getDataId",response);
-    return response.data || [];
-}
-
-// PUT
-async function updateProduct(id, productData) {
-    const response = await updateData("products/" + id, productData);
-    console.log("products updateData",response);
-    return response.data || [];
-}
-
-async function deleteProduct(id) {
-    const { data, error } = await deleteData("products", id);
-    if (error) throw new Error(error);
-    return data;
-}
-
 function handleEdit(id) {
     localStorage.setItem("editProductId", id)
-    window.location.href = "create.html"
+    window.location.href = "edit.html"
 }
 
 async function loadEditForm() {
@@ -195,7 +202,8 @@ async function loadEditForm() {
     const isEditing = !!editId
 
     const title = document.querySelector(".header-actions h2")
-    if (title) title.textContent = isEditing ? "Edit Product" : "Add Product"
+
+    if (title) title.textContent = isEditing ? "Sửa sản phẩm" : "Add Product"
     try {
         if (isEditing) {
             const product = await getProductById(editId)
@@ -210,49 +218,6 @@ async function loadEditForm() {
     }
 }
 
-
-
-
-
-
-// //                  HANDLE MODAL
-// function toggleModal() {
-//     const modal = document.getElementById("productModal")
-//     if (!modal) return
-//     const isOpening = modal.style.display !== "flex"
-//     modal.style.display = isOpening ? "flex" : "none"
-//     if (isOpening) loadCategories()
-// }
-//
-// async function handleCreateProduct(event) {
-//     event.preventDefault()
-//     const submitBtn = event.target.querySelector('[type="submit"]')
-//     submitBtn.disabled = true
-//     submitBtn.textContent = "Đang lưu..."
-//     try {
-//         const productData = {
-//             name: document.getElementById("inputName").value.trim(),
-//             categoryId: parseInt(document.getElementById("inputCategory").value),
-//             price: parseInt(document.getElementById("inputPrice").value) || 0,
-//             remaining: parseInt(document.getElementById("inputStock").value) || 0,
-//             sku: document.getElementById("inputSku").value.trim() || null,
-//         }
-//         const newProduct = await apiCreateProduct(productData)
-//         allProducts.unshift(newProduct)
-//         renderProductList(allProducts)
-//         updateStats(allProducts)
-//         toggleModal()
-//         event.target.reset()
-//         alert("Thêm sản phẩm thành công")
-//     } catch (err) {
-//         alert("Error " + err.message)
-//     } finally {
-//         submitBtn.disabled = false
-//         submitBtn.textContent = "Lưu sản phẩm"
-//     }
-// }
-//
-//  HANDLE PAGE PUT PRODUCT CREATE
 async function loadCategories(selectedId = null) {
     const select = document.getElementById("inputCategory")
     if (!select) return
@@ -290,16 +255,13 @@ function fillForm(product) {
     }
 }
 
-// //  FORM SUBMIT
 async function handleSaveProduct(event) {
     event.preventDefault();
+
     const form = event.target;
     const editId = form.getAttribute("data-edit-id");
     const isEditing = !!editId;
-    const saveBtn = form.querySelector(".btn-save") || form.querySelector('[type="submit"]');
-
-    saveBtn.disabled = true;
-    saveBtn.textContent = "Saving...";
+    const saveBtn = document.getElementById("btnSaveProduct") || form.querySelector('button[type="submit"]');
 
     try {
         const productData = {
@@ -307,28 +269,64 @@ async function handleSaveProduct(event) {
             categoryId: parseInt(document.getElementById("inputCategory").value),
             price: parseInt(document.getElementById("inputPrice").value) || 0,
             remaining: parseInt(document.getElementById("inputStock").value) || 0,
-            sku: document.getElementById("inputSku").value.trim() || null,
-            description: document.getElementById("inputDescription")?.value.trim() || null,
+            sku: document.getElementById("inputSku").value.trim() || null
         };
+
+        if (!productData.categoryId) {
+            alert("Vui lòng chọn danh mục sản phẩm!");
+            if (saveBtn) saveBtn.disabled = false;
+            return;
+        }
 
         if (isEditing) {
             const { error } = await updateData("products", editId, productData);
             if (error) throw new Error(error);
-            localStorage.removeItem("editProductId");
-            alert("Cập nhật thành công!");
+            alert("Cập nhật sản phẩm thành công!");
         } else {
-            // Tạo mới
-            const { error } = await createData("products", productData);
+            const { data, error } = await createData("products", productData);
             if (error) throw new Error(error);
-            alert("Thêm mới thành công!");
+
+            if (typeof allProducts !== 'undefined') {
+                allProducts.unshift(data);
+            }
+            alert("Thêm sản phẩm mới thành công!");
         }
 
-        window.location.href = "index.html"; // Quay lại danh sách
+        const modal = document.getElementById("productModal");
+
+        if (modal) {
+            modal.style.display = "none";
+            form.reset();
+            form.removeAttribute("data-edit-id");
+
+            if (typeof renderTable === "function") {
+                renderTable('productTable', productConfigs, allProducts);
+                renderProductsSummary(allProducts);
+            }
+        } else {
+            window.location.href = "index.html";
+        }
+
     } catch (err) {
-        alert("Lỗi: " + err.message);
+        console.error("Lỗi khi lưu sản phẩm:", err);
+        alert("Có lỗi xảy ra: " + err.message);
     } finally {
-        saveBtn.disabled = false;
-        saveBtn.textContent = isEditing ? "Lưu thay đổi" : "Thêm sản phẩm";
+        if (saveBtn) {
+            saveBtn.disabled = false;
+            saveBtn.textContent = isEditing ? "Lưu thay đổi" : "Lưu sản phẩm";
+        }
     }
 }
 
+
+async function getProductById(id) {
+    const response = await getDataId("products", id);
+    console.log("products getDataId",response);
+    return response.data || [];
+}
+
+async function deleteProduct(id) {
+    const { data, error } = await deleteData("products", id);
+    if (error) throw new Error(error);
+    return data;
+}
