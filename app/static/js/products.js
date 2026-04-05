@@ -91,8 +91,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
             productForm.addEventListener("submit", handleSaveProduct);
         }
-
-
     } catch (error) {
         console.error("Lỗi khởi tạo:", error);
     }
