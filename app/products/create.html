@@ -63,16 +63,7 @@
 <body>
 
 <div class="container">
-  <aside class="sidebar">
-    <h2>ShopAdmin</h2>
-    <ul>
-      <li><i class="fas fa-home"></i> Tổng quan</li>
-      <li class="active"><i class="fas fa-box"></i> Sản phẩm</li>
-      <li><i class="fas fa-shopping-cart"></i> Đơn hàng</li>
-      <li><i class="fas fa-users"></i> Khách hàng</li>
-      <li><i class="fas fa-chart-line"></i> Báo cáo</li>
-    </ul>
-  </aside>
+    <aside class="sidebar" id="sidebar"></aside>
 
   <main class="main-content">
     <div class="header-actions">
@@ -172,7 +163,6 @@
     reader.readAsDataURL(event.target.files[0]);
   }
 </script>
-<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-<script src="product.js"></script>
+<script type="module" src="../static/js/products.js"></script>
 </body>
 </html>
