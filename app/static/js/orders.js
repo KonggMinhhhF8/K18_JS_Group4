@@ -1,314 +1,334 @@
-import { checkAuth, getData, createData, updateData, deleteData, summary, renderTable, renderSidebar } from "./base.js";
+import {
+    checkAuth, getData, createData, updateData, deleteData,
+    setupSearch, renderTable, renderSidebar, summary
+} from "./base.js";
 
-let allOrdersData = [];
-
-document.addEventListener('DOMContentLoaded', async () => {
-    if (!checkAuth()) return;
-    renderSidebar('order');
-
-    try {
-        await refreshData();
-        initFilters();
-    } catch (error) {
-        console.error("Lỗi hệ thống:", error);
-    }
-});
-
-async function refreshData() {
-    const response = await getData("orders");
-    allOrdersData = response.data || [];
-    renderOrdersSummary(allOrdersData);
-
-    const activeTab = document.querySelector('.tab.active')?.innerText.trim() || 'Tất cả';
-    let filtered = allOrdersData;
-
-    if (activeTab === 'Chờ xử lý') filtered = allOrdersData.filter(o => o.status === 'pending');
-    else if (activeTab === 'Đang giao') filtered = allOrdersData.filter(o => o.status === 'delivering');
-    else if (activeTab === 'Đã xong') filtered = allOrdersData.filter(o => o.status === 'done');
-    else if (activeTab === 'Đã hủy') filtered = allOrdersData.filter(o => o.status === 'cancel');
-
-    renderTable('orderTable', orderConfigs, filtered);
-}
-
-function renderOrdersSummary(orders) {
-    const totalOrders = orders.length;
-    const processingOrders = orders.filter(item => item.status === "pending" || item.status === "delivering").length;
-    const successOrders = orders.filter(item => item.status === "done").length;
-    const cancelOrders = orders.filter(item => item.status === "cancel").length;
-
-    const listData = [
-        { title: "Tổng đơn hàng", value: totalOrders, color: "blue" },
-        { title: "Đang xử lý", value: processingOrders, color: "orange" },
-        { title: "Thành công", value: successOrders, color: "green" },
-        { title: "Đã hủy", value: cancelOrders, color: "red" }
-    ];
-
-    const stats = document.getElementById("order-stats");
-    if (stats) stats.innerHTML = listData.map(item => summary(item.title, item.value, item.color)).join('');
-}
+let allOrders = [];
 
 const orderConfigs = [
-    { label: 'Mã đơn', render: (order) => `<strong>#ORD-${order.id}</strong>` },
-    { label: 'Khách hàng', render: (order) => order.customer ? `${order.customer.name}<br><small>${order.customer.phone}</small>` : "Khách vãng lai" },
-    { label: 'Sản phẩm', render: (order) => order.product ? `${order.product.name} (x${order.amount})` : "Sản phẩm đã xóa" },
-    { label: 'Tổng tiền', render: (order) => {
+    {label: 'Mã đơn', render: (order) => `<strong>#ORD-${order.id}</strong>`},
+    {
+        label: 'Khách hàng',
+        render: (order) => order.customer ? `${order.customer.name}<br><small>${order.customer.phone}</small>` : "Khách vãng lai"
+    },
+    {
+        label: 'Sản phẩm',
+        render: (order) => order.product ? `${order.product.name} (x${order.amount})` : "Sản phẩm đã xóa"
+    },
+    {
+        label: 'Tổng tiền', render: (order) => {
             const price = order.product ? order.product.price : 0;
             return `<strong>${(order.amount * price).toLocaleString('vi-VN')}đ</strong>`;
-        }},
-    { label: 'Trạng thái', render: (order) => {
-            const statusMap = { 'pending': { class: 'pending', text: 'Chờ xử lý' }, 'delivering': { class: 'shipping', text: 'Đang giao' }, 'done': { class: 'completed', text: 'Đã xong' }, 'cancel': { class: 'cancelled', text: 'Đã hủy' } };
-            const s = statusMap[order.status] || { class: '', text: order.status };
+        }
+    },
+    {
+        label: 'Trạng thái', render: (order) => {
+            const statusMap = {
+                'pending': {class: 'pending', text: 'Chờ xử lý'},
+                'delivering': {class: 'shipping', text: 'Đang giao'},
+                'done': {class: 'completed', text: 'Đã xong'},
+                'cancel': {class: 'cancelled', text: 'Đã hủy'}
+            };
+            const s = statusMap[order.status] || {class: '', text: order.status};
             return `<span class="badge ${s.class}">${s.text}</span>`;
         }
     },
     {
         label: 'Thao tác',
         render: (order) => `
-            <button class="btn-action" title="Chỉnh sửa đơn hàng" onclick="editOrder(${order.id})"><i class="fas fa-edit"></i></button>
-            <button class="btn-action" title="Xem chi tiết" onclick="viewDetail(${order.id})"><i class="fas fa-eye"></i></button>
-            <button class="btn-action" title="Xóa đơn hàng" onclick="deleteOrder(${order.id})" style="color: var(--danger);"><i class="fas fa-trash"></i></button>
+            <button class="btn-action edit-btn" data-id="${order.id}" title="Chỉnh sửa">
+                <i class="fas fa-edit"></i>
+            </button>
+            <button class="btn-action view-btn" data-id="${order.id}" title="Xem chi tiết">
+                <i class="fas fa-eye"></i>
+            </button>
+            <button class="btn-action delete-btn" data-id="${order.id}" title="Xóa" style="color: var(--danger);">
+                <i class="fas fa-trash"></i>
+            </button>
         `
     }
 ];
 
+document.addEventListener('DOMContentLoaded', async () => {
+    try {
+        if (!checkAuth()) return;
+        renderSidebar('order');
+
+        const orderForm = document.getElementById('orderForm');
+        const tableBody = document.querySelector('#orderTable tbody');
+
+        allOrders = await getOrders();
+        renderData(allOrders);
+
+        initFilters();
+
+        document.getElementById("btnAddOrder")?.addEventListener("click", async () => {
+            await openOrderModal();
+        });
+
+        document.querySelector('#orderModal .btn-cancel')?.addEventListener('click', closeOrderModal);
+        document.querySelector('#orderDetailModal .btn-cancel')?.addEventListener('click', closeDetailModal);
+
+        tableBody?.addEventListener('click', async (e) => {
+            const btn = e.target.closest('button');
+            if (!btn) return;
+
+            const id = btn.dataset.id;
+            if (!id) return;
+
+            if (btn.classList.contains('edit-btn')) {
+                await openOrderModal(Number(id));
+            }
+            if (btn.classList.contains('view-btn')) {
+                viewDetail(Number(id));
+            }
+            if (btn.classList.contains('delete-btn')) {
+                await handleDeleteOrder(Number(id));
+            }
+        });
+
+        orderForm?.addEventListener('submit', handleSaveOrder);
+
+        setupSearch('searchInput', allOrders, ['id', 'customer.name', 'product.name'], (filtered) => {
+            renderData(filtered);
+        });
+
+    } catch (error) {
+        console.error("Lỗi khởi tạo trang Đơn Hàng:", error);
+    }
+});
+
+
+async function getOrders() {
+    const {data, errormsg} = await getData("orders");
+    if (errormsg) throw new Error(errormsg);
+    return data || [];
+}
+
+async function openOrderModal(id = null) {
+    const modal = document.getElementById("orderModal");
+    const form = document.getElementById("orderForm");
+    const title = document.getElementById("modalTitle");
+    const inputId = document.getElementById("orderId");
+
+    const customerSelect = document.getElementById("customerId");
+    const productSelect = document.getElementById("productId");
+    const statusSelect = document.getElementById("orderStatus");
+    const amountInput = document.getElementById("orderAmount");
+
+    form.reset();
+
+    try {
+        const [custRes, prodRes] = await Promise.all([getData('customers'), getData('products')]);
+        customerSelect.innerHTML = '<option value="">-- Chọn Khách Hàng --</option>' +
+            (custRes.data || []).map(c => `<option value="${c.id}">${c.name} (${c.phone})</option>`).join('');
+        productSelect.innerHTML = '<option value="">-- Chọn Sản Phẩm --</option>' +
+            (prodRes.data || []).map(p => `<option value="${p.id}">${p.name} - ${p.price.toLocaleString('vi-VN')}đ</option>`).join('');
+    } catch (err) {
+        console.error("Lỗi tải Dropdown:", err);
+    }
+
+    if (id) {
+        title.textContent = `Chỉnh sửa Đơn Hàng #${id}`;
+        inputId.value = id;
+
+        const order = allOrders.find(o => o.id === id);
+        if (order) {
+            if (order.customer) customerSelect.value = order.customer.id;
+            if (order.product) productSelect.value = order.product.id;
+
+            customerSelect.disabled = true;
+            productSelect.disabled = true;
+
+            amountInput.value = order.amount;
+            statusSelect.value = order.status;
+            statusSelect.setAttribute('data-old-status', order.status);
+        }
+    } else {
+        title.textContent = "Thêm Đơn Hàng Mới";
+        inputId.value = "";
+        customerSelect.disabled = false;
+        productSelect.disabled = false;
+        statusSelect.removeAttribute('data-old-status');
+    }
+
+    modal.style.display = "flex";
+}
+
+function closeOrderModal() {
+    document.getElementById("orderModal").style.display = "none";
+}
+
+function closeDetailModal() {
+    document.getElementById('orderDetailModal').style.display = 'none';
+}
+
+async function handleSaveOrder(event) {
+    event.preventDefault();
+    const form = event.target;
+    const orderId = document.getElementById("orderId").value;
+    const isEditing = !!orderId;
+    const saveBtn = form.querySelector(".btn-save");
+
+    const productId = parseInt(document.getElementById('productId').value);
+    const amount = parseInt(document.getElementById('orderAmount').value);
+    const statusElement = document.getElementById('orderStatus');
+    const newStatus = statusElement.value;
+
+    const payload = {
+        customerId: parseInt(document.getElementById('customerId').value),
+        productId: productId,
+        amount: amount,
+        status: newStatus
+    };
+
+    try {
+        if (saveBtn) {
+            saveBtn.disabled = true;
+            saveBtn.textContent = "Đang lưu...";
+        }
+
+        if (isEditing) {
+            const oldStatus = statusElement.getAttribute('data-old-status');
+            const {error} = await updateData('orders', orderId, payload);
+            if (error) throw new Error(error);
+
+            if (newStatus === 'cancel' && oldStatus !== 'cancel') {
+                await updateProductStock(payload.productId, payload.amount);
+            } else if (oldStatus === 'cancel' && newStatus !== 'cancel') {
+                await updateProductStock(payload.productId, -payload.amount);
+            }
+
+            alert("Cập nhật đơn hàng thành công!");
+        } else {
+            const {error} = await createData('orders', payload);
+            if (error) throw new Error(error);
+
+            await updateProductStock(productId, -amount);
+            alert("Tạo đơn hàng thành công!");
+        }
+
+        closeOrderModal();
+
+        allOrders = await getOrders();
+        applyCurrentFilters();
+
+    } catch (err) {
+        alert("Lỗi: " + err.message);
+    } finally {
+        if (saveBtn) {
+            saveBtn.disabled = false;
+            saveBtn.textContent = "Lưu Đơn Hàng";
+        }
+    }
+}
+
+async function updateProductStock(productId, stockChange) {
+    const {data: product} = await getData(`products/${productId}`);
+    if (product) {
+        const newRemaining = product.remaining + stockChange;
+        const payload = {
+            categoryId: product.category.id,
+            name: product.name,
+            sku: product.sku,
+            price: product.price,
+            remaining: newRemaining >= 0 ? newRemaining : 0
+        };
+        await updateData('products', productId, payload);
+    }
+}
+
+async function handleDeleteOrder(id) {
+    if (!confirm(`Bạn có chắc chắn muốn xóa đơn hàng #ORD-${id} không? Hành động này không thể hoàn tác!`)) return;
+
+    try {
+        const orderToDelete = allOrders.find(o => o.id === id);
+        const {error} = await deleteData('orders', id);
+        if (error) throw new Error(error);
+
+        if (orderToDelete && orderToDelete.product && orderToDelete.status !== 'cancel') {
+            await updateProductStock(orderToDelete.product.id, orderToDelete.amount);
+        }
+
+        alert("Xóa đơn hàng thành công!");
+        allOrders = await getOrders();
+        applyCurrentFilters();
+
+    } catch (err) {
+        alert("Lỗi xóa: " + err.message);
+    }
+}
+
+function viewDetail(id) {
+    const order = allOrders.find(o => o.id === id);
+    if (!order) return;
+
+    const statusMap = {'pending': 'Chờ xử lý', 'delivering': 'Đang giao', 'done': 'Hoàn thành', 'cancel': 'Đã hủy'};
+
+    document.getElementById('detailOrderId').innerText = `#${order.id}`;
+    document.getElementById('detailStatus').innerText = statusMap[order.status] || order.status;
+    document.getElementById('detailDate').innerText = order.date || "N/A";
+    document.getElementById('detailCustomerName').innerText = order.customer ? order.customer.name : "Khách vãng lai";
+    document.getElementById('detailCustomerPhone').innerText = order.customer ? order.customer.phone : "Không có";
+    document.getElementById('detailCustomerAddress').innerText = order.customer ? order.customer.address : "Không có";
+
+    const price = order.product ? order.product.price : 0;
+    document.getElementById('detailProductName').innerText = order.product ? order.product.name : "Sản phẩm (Đã xóa)";
+    document.getElementById('detailProductPrice').innerText = price.toLocaleString('vi-VN') + "đ";
+    document.getElementById('detailAmount').innerText = order.amount;
+    document.getElementById('detailTotal').innerText = (price * order.amount).toLocaleString('vi-VN') + "đ";
+
+    document.getElementById('orderDetailModal').style.display = 'flex';
+}
+
+function renderData(data) {
+    const stats = document.getElementById("order-stats");
+    if (stats) {
+        stats.innerHTML =
+            summary("Tổng đơn", data.length, "blue") +
+            summary("Đang xử lý", data.filter(i => i.status === "pending" || i.status === "delivering").length, "orange") +
+            summary("Thành công", data.filter(i => i.status === "done").length, "green") +
+            summary("Đã hủy", data.filter(i => i.status === "cancel").length, "red");
+    }
+    renderTable('orderTable', orderConfigs, data);
+}
+
 function initFilters() {
     const tabs = document.querySelectorAll('.tab');
     tabs.forEach(tab => {
-        tab.addEventListener('click', function() {
+        tab.addEventListener('click', function () {
             tabs.forEach(t => t.classList.remove('active'));
             this.classList.add('active');
-            const tabName = this.innerText.trim();
-            let filtered = allOrdersData;
-
-            if (tabName === 'Chờ xử lý') filtered = allOrdersData.filter(o => o.status === 'pending');
-            else if (tabName === 'Đang giao') filtered = allOrdersData.filter(o => o.status === 'delivering');
-            else if (tabName === 'Đã xong') filtered = allOrdersData.filter(o => o.status === 'done');
-            else if (tabName === 'Đã hủy') filtered = allOrdersData.filter(o => o.status === 'cancel');
-
-            renderTable('orderTable', orderConfigs, filtered);
+            applyCurrentFilters();
         });
     });
 
-    const searchInput = document.querySelector('.search-bar input');
-    if(searchInput) {
-        searchInput.addEventListener('input', e => {
-            const kw = e.target.value.toLowerCase().trim();
-            const filtered = allOrdersData.filter(o =>
-                `#ord-${o.id}`.includes(kw) || (o.customer && o.customer.name.toLowerCase().includes(kw))
-            );
-            renderTable('orderTable', orderConfigs, filtered);
-        });
-    }
-
-    const dateInput = document.querySelector('.date-filter input');
-    if(dateInput) {
-        dateInput.addEventListener('change', e => {
-            const date = e.target.value;
-            const filtered = date ? allOrdersData.filter(o => o.date === date) : allOrdersData;
-            renderTable('orderTable', orderConfigs, filtered);
-        });
-    }
+    document.querySelector('.date-filter input')?.addEventListener('change', applyCurrentFilters);
 }
 
-window.openModal = async function() {
-    document.getElementById('modalTitle').innerText = "Thêm Đơn Hàng Mới";
-    const form = document.getElementById('orderForm');
-    if(form) form.reset();
-    document.getElementById('orderId').value = '';
-    document.getElementById('orderModal').style.display = 'flex';
+function applyCurrentFilters() {
+    const activeTab = document.querySelector('.tab.active')?.innerText.trim() || 'Tất cả';
+    const kw = document.querySelector('#searchInput')?.value.toLowerCase().trim() || "";
+    const dateVal = document.querySelector('.date-filter input')?.value;
 
-    document.getElementById('customerId').disabled = false;
-    document.getElementById('productId').disabled = false;
+    let filtered = allOrders;
 
-    try {
-        const custRes = await getData('customers');
-        const prodRes = await getData('products');
+    if (activeTab === 'Chờ xử lý') filtered = filtered.filter(o => o.status === 'pending');
+    else if (activeTab === 'Đang giao') filtered = filtered.filter(o => o.status === 'delivering');
+    else if (activeTab === 'Đã xong') filtered = filtered.filter(o => o.status === 'done');
+    else if (activeTab === 'Đã hủy') filtered = filtered.filter(o => o.status === 'cancel');
 
-        const customerSelect = document.getElementById('customerId');
-        customerSelect.innerHTML = '<option value="">-- Chọn Khách Hàng --</option>';
-        if (custRes.data) {
-            custRes.data.forEach(c => customerSelect.innerHTML += `<option value="${c.id}">${c.name} (${c.phone})</option>`);
-        }
-
-        const productSelect = document.getElementById('productId');
-        productSelect.innerHTML = '<option value="">-- Chọn Sản Phẩm --</option>';
-        if (prodRes.data) {
-            prodRes.data.forEach(p => productSelect.innerHTML += `<option value="${p.id}">${p.name} - ${p.price.toLocaleString('vi-VN')}đ</option>`);
-        }
-    } catch (err) { console.error(err); }
-};
-
-window.editOrder = async function(id) {
-    try {
-        const order = allOrdersData.find(o => o.id === id);
-        if(!order) return;
-
-        document.getElementById('modalTitle').innerText = "Chỉnh sửa Đơn Hàng #" + id;
-        document.getElementById('orderModal').style.display = 'flex';
-        document.getElementById('orderId').value = order.id;
-
-        const custRes = await getData('customers');
-        const prodRes = await getData('products');
-
-        const customerSelect = document.getElementById('customerId');
-        customerSelect.innerHTML = '<option value="">-- Chọn Khách Hàng --</option>';
-        if (custRes.data) custRes.data.forEach(c => customerSelect.innerHTML += `<option value="${c.id}">${c.name} (${c.phone})</option>`);
-
-        const productSelect = document.getElementById('productId');
-        productSelect.innerHTML = '<option value="">-- Chọn Sản Phẩm --</option>';
-        if (prodRes.data) prodRes.data.forEach(p => productSelect.innerHTML += `<option value="${p.id}">${p.name} - ${p.price.toLocaleString('vi-VN')}đ</option>`);
-
-        if(order.customer) document.getElementById('customerId').value = order.customer.id;
-        if(order.product) document.getElementById('productId').value = order.product.id;
-
-        document.getElementById('customerId').disabled = true;
-        document.getElementById('productId').disabled = true;
-
-        document.getElementById('orderAmount').value = order.amount;
-
-        const statusElement = document.getElementById('orderStatus');
-        statusElement.value = order.status;
-        statusElement.setAttribute('data-old-status', order.status);
-
-    } catch (err) {
-        console.error("Lỗi khi mở form chỉnh sửa:", err);
+    if (kw) {
+        filtered = filtered.filter(o =>
+            `#ord-${o.id}`.includes(kw) ||
+            (o.customer && o.customer.name.toLowerCase().includes(kw)) ||
+            (o.product && o.product.name.toLowerCase().includes(kw))
+        );
     }
-}
 
-window.deleteOrder = async function(id) {
-    if(confirm(`Bạn có chắc chắn muốn xóa đơn hàng #ORD-${id} không? Hành động này không thể hoàn tác!`)) {
-        const orderToDelete = allOrdersData.find(o => o.id === id);
-        const { error } = await deleteData('orders', id);
-
-        if(!error) {
-            if (orderToDelete && orderToDelete.product && orderToDelete.status !== 'cancel') {
-                const productId = orderToDelete.product.id;
-                const amount = orderToDelete.amount;
-
-                const { data: product } = await getData(`products/${productId}`);
-                if (product) {
-                    const updateProductPayload = {
-                        categoryId: product.category.id,
-                        name: product.name,
-                        sku: product.sku,
-                        price: product.price,
-                        remaining: product.remaining + amount
-                    };
-                    await updateData('products', productId, updateProductPayload);
-                }
-            }
-            alert("Xóa đơn hàng thành công!");
-            refreshData();
-        } else {
-            alert("Lỗi khi xóa: " + error);
-        }
+    if (dateVal) {
+        filtered = filtered.filter(o => o.date === dateVal);
     }
-}
 
-window.closeModal = () => document.getElementById('orderModal').style.display = 'none';
-window.closeDetailModal = () => document.getElementById('orderDetailModal').style.display = 'none';
-
-const orderForm = document.getElementById('orderForm');
-if (orderForm) {
-    orderForm.addEventListener('submit', async function(e) {
-        e.preventDefault();
-
-        const currentOrderId = document.getElementById('orderId').value;
-        const productId = parseInt(document.getElementById('productId').value);
-        const amount = parseInt(document.getElementById('orderAmount').value);
-
-        const payload = {
-            customerId: parseInt(document.getElementById('customerId').value),
-            productId: productId,
-            amount: amount,
-            status: document.getElementById('orderStatus').value
-        };
-
-        try {
-            if (currentOrderId) {
-                const oldStatus = document.getElementById('orderStatus').getAttribute('data-old-status');
-                const newStatus = payload.status;
-
-                const { error } = await updateData('orders', currentOrderId, payload);
-                if(!error) {
-                    if (newStatus === 'cancel' && oldStatus !== 'cancel') {
-                        const { data: product } = await getData(`products/${payload.productId}`);
-                        if (product) {
-                            const updateProductPayload = {
-                                categoryId: product.category.id,
-                                name: product.name,
-                                sku: product.sku,
-                                price: product.price,
-                                remaining: product.remaining + payload.amount
-                            };
-                            await updateData('products', payload.productId, updateProductPayload);
-                        }
-                    } else if (oldStatus === 'cancel' && newStatus !== 'cancel') {
-                        const { data: product } = await getData(`products/${payload.productId}`);
-                        if (product) {
-                            const newRemaining = product.remaining - payload.amount;
-                            const updateProductPayload = {
-                                categoryId: product.category.id,
-                                name: product.name,
-                                sku: product.sku,
-                                price: product.price,
-                                remaining: newRemaining >= 0 ? newRemaining : 0
-                            };
-                            await updateData('products', payload.productId, updateProductPayload);
-                        }
-                    }
-                    alert("Cập nhật đơn hàng thành công!");
-                }
-                else throw new Error(error);
-            } else {
-                const { error } = await createData('orders', payload);
-                if(!error) {
-                    const { data: product } = await getData(`products/${productId}`);
-                    if (product) {
-                        const newRemaining = product.remaining - amount;
-                        const updateProductPayload = {
-                            categoryId: product.category.id,
-                            name: product.name,
-                            sku: product.sku,
-                            price: product.price,
-                            remaining: newRemaining >= 0 ? newRemaining : 0
-                        };
-                        await updateData('products', productId, updateProductPayload);
-                    }
-                    alert("Tạo đơn hàng thành công!");
-                }
-                else throw new Error(error);
-            }
-
-            window.closeModal();
-            refreshData();
-
-        } catch (error) {
-            alert("Đã xảy ra lỗi: " + error);
-        }
-    });
-}
-
-window.viewDetail = function(id) {
-    const order = allOrdersData.find(o => o.id === id);
-    if(order) {
-        const statusMap = { 'pending': 'Chờ xử lý', 'delivering': 'Đang giao', 'done': 'Hoàn thành', 'cancel': 'Đã hủy' };
-
-        document.getElementById('detailOrderId').innerText = `#${order.id}`;
-        document.getElementById('detailStatus').innerText = statusMap[order.status] || order.status;
-        document.getElementById('detailDate').innerText = order.date || "N/A";
-
-        document.getElementById('detailCustomerName').innerText = order.customer ? order.customer.name : "Khách vãng lai";
-        document.getElementById('detailCustomerPhone').innerText = order.customer ? order.customer.phone : "Không có";
-        document.getElementById('detailCustomerAddress').innerText = order.customer ? order.customer.address : "Không có";
-
-        const price = order.product ? order.product.price : 0;
-        document.getElementById('detailProductName').innerText = order.product ? order.product.name : "Sản phẩm (Đã xóa)";
-        document.getElementById('detailProductPrice').innerText = price.toLocaleString('vi-VN') + "đ";
-        document.getElementById('detailAmount').innerText = order.amount;
-
-        document.getElementById('detailTotal').innerText = (price * order.amount).toLocaleString('vi-VN') + "đ";
-
-        document.getElementById('orderDetailModal').style.display = 'flex';
-    }
+    renderData(filtered);
 }

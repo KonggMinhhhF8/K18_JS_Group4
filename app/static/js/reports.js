@@ -1,102 +1,119 @@
-import { summaryReport, renderTable, checkAuth, getData, renderSidebar } from "./base.js";
+import {summaryReport, renderTable, checkAuth, getData, renderSidebar} from "./base.js";
 
 let allOrders = [];
 let allProducts = [];
 let revenueChartInstance = null;
 let categoryChartInstance = null;
 
+const topProductConfigs = [
+    {label: 'Sản phẩm', render: (item) => `<strong>${item.name}</strong>`},
+    {label: 'Số lượng bán', render: (item) => `${item.totalSold}`},
+    {label: 'Doanh thu', render: (item) => `<strong>${item.revenue.toLocaleString('vi-VN')}đ</strong>`},
+    {
+        label: 'Tồn kho hiện tại', render: (item) => {
+            if (item.remaining <= 0) return `<span style="color: var(--danger)">Hết hàng</span>`;
+            if (item.remaining < 10) return `<span style="color: var(--warning)">Sắp hết (${item.remaining})</span>`;
+            return `Còn hàng (${item.remaining})`;
+        }
+    }
+];
+
 document.addEventListener('DOMContentLoaded', async () => {
-    if (!checkAuth()) return;
-    renderSidebar('report');
-
     try {
-        const [ordRes, prodRes] = await Promise.all([
-            getData("orders"),
-            getData("products")
-        ]);
+        if (!checkAuth()) return;
+        renderSidebar('report');
 
-        allOrders = ordRes.data || [];
-        allProducts = prodRes.data || [];
+        allOrders = await fetchOrders();
+        allProducts = await fetchProducts();
 
-        const today = new Date();
-        const lastWeek = new Date(today);
-        lastWeek.setDate(today.getDate() - 6);
+        setupDefaultDates();
 
-        document.getElementById('startDate').value = lastWeek.toISOString().split('T')[0];
-        document.getElementById('endDate').value = today.toISOString().split('T')[0];
+        renderData(allOrders);
 
-        updateDashboard(allOrders);
-
-        document.getElementById('btnFilter').addEventListener('click', () => {
-            const start = document.getElementById('startDate').value;
-            const end = document.getElementById('endDate').value;
-
-            if (!start || !end) {
-                alert("Vui lòng chọn đầy đủ Từ ngày và Đến ngày!");
-                return;
-            }
-
-            const filteredOrders = allOrders.filter(order => {
-                if (!order.date) return false;
-                return order.date >= start && order.date <= end;
-            });
-
-            updateDashboard(filteredOrders);
-        });
+        document.getElementById('btnFilter')?.addEventListener('click', handleFilter);
 
     } catch (error) {
-        console.error("Lỗi hệ thống:", error);
+        console.error("Lỗi khởi tạo trang Báo Cáo:", error);
     }
 });
 
-function updateDashboard(ordersData) {
-    renderReportsSummary(ordersData);
-    renderTopProducts(ordersData);
-    renderRevenueChart(ordersData);
+
+async function fetchOrders() {
+    const {data, errormsg} = await getData("orders");
+    if (errormsg) throw new Error(errormsg);
+    return data || [];
+}
+
+async function fetchProducts() {
+    const {data, errormsg} = await getData("products");
+    if (errormsg) throw new Error(errormsg);
+    return data || [];
+}
+
+function setupDefaultDates() {
+    const today = new Date();
+    const lastWeek = new Date(today);
+    lastWeek.setDate(today.getDate() - 6);
+
+    const startInput = document.getElementById('startDate');
+    const endInput = document.getElementById('endDate');
+    if (startInput) startInput.value = lastWeek.toISOString().split('T')[0];
+    if (endInput) endInput.value = today.toISOString().split('T')[0];
+}
+
+function handleFilter() {
+    const start = document.getElementById('startDate').value;
+    const end = document.getElementById('endDate').value;
+
+    if (!start || !end) {
+        alert("Vui lòng chọn đầy đủ Từ ngày và Đến ngày!");
+        return;
+    }
+
+    const filteredOrders = allOrders.filter(order => {
+        if (!order.date) return false;
+        return order.date >= start && order.date <= end;
+    });
+
+    renderData(filteredOrders);
+}
+
+
+function renderData(ordersData) {
+    const successfulOrders = ordersData.filter(o => o.status !== 'cancel');
+
+    renderReportsSummary(successfulOrders);
+    renderTopProducts(successfulOrders);
+    renderRevenueChart(successfulOrders);
     renderCategoryChart();
 }
 
-function renderReportsSummary(orders) {
-    const successfulOrders = orders.filter(o => o.status !== 'cancel');
+function renderReportsSummary(successfulOrders) {
     const revenue = successfulOrders.reduce((sum, o) => sum + (o.amount * (o.product?.price || 0)), 0);
     const profit = revenue * 0.3;
 
     const orderCounts = successfulOrders.reduce((acc, o) => {
-        if(o.customer) acc[o.customer.id] = (acc[o.customer.id] || 0) + 1;
+        if (o.customer) acc[o.customer.id] = (acc[o.customer.id] || 0) + 1;
         return acc;
     }, {});
     const newCustCount = Object.keys(orderCounts).length;
 
     const listData = [
-        { title: "Doanh thu", value: revenue.toLocaleString('vi-VN') + "đ", trend: "Theo kỳ lọc", isUp: true },
-        { title: "Đơn thành công", value: successfulOrders.length, trend: "Trong kỳ", isUp: true },
-        { title: "Lợi nhuận", value: profit.toLocaleString('vi-VN') + "đ", trend: "Biên lợi nhuận 30%", isUp: true },
-        { title: "Số khách mua", value: newCustCount, trend: "Trong kỳ", isUp: true }
+        {title: "Doanh thu", value: revenue.toLocaleString('vi-VN') + "đ", trend: "Theo kỳ lọc", isUp: true},
+        {title: "Đơn thành công", value: successfulOrders.length, trend: "Trong kỳ", isUp: true},
+        {title: "Lợi nhuận", value: profit.toLocaleString('vi-VN') + "đ", trend: "Biên lợi nhuận 30%", isUp: true},
+        {title: "Số khách mua", value: newCustCount, trend: "Trong kỳ", isUp: true}
     ];
 
     const stats = document.getElementById("reports-grid");
     if (stats) stats.innerHTML = listData.map(item => summaryReport(item.title, item.value, item.trend, item.isUp)).join('');
 }
 
-const topProductConfigs = [
-    { label: 'Sản phẩm', render: (item) => `<strong>${item.name}</strong>` },
-    { label: 'Số lượng bán', render: (item) => `${item.totalSold}` },
-    { label: 'Doanh thu', render: (item) => `<strong>${item.revenue.toLocaleString('vi-VN')}đ</strong>` },
-    { label: 'Tồn kho hiện tại', render: (item) => {
-            if (item.remaining <= 0) return `<span style="color: var(--danger)">Hết hàng</span>`;
-            if (item.remaining < 10) return `<span style="color: var(--warning)">Sắp hết</span>`;
-            return `Còn hàng (${item.remaining})`;
-        }
-    }
-];
-
-function renderTopProducts(orders) {
-    const successfulOrders = orders.filter(o => o.status !== 'cancel');
-
+function renderTopProducts(successfulOrders) {
     const productMap = successfulOrders.reduce((acc, order) => {
         const p = order.product;
-        if(p) {
-            if (!acc[p.id]) acc[p.id] = { name: p.name, remaining: p.remaining, totalSold: 0, revenue: 0 };
+        if (p) {
+            if (!acc[p.id]) acc[p.id] = {name: p.name, remaining: p.remaining, totalSold: 0, revenue: 0};
             acc[p.id].totalSold += order.amount;
             acc[p.id].revenue += (order.amount * p.price);
         }
@@ -107,16 +124,14 @@ function renderTopProducts(orders) {
     renderTable('topProductsTable', topProductConfigs, finalData);
 }
 
-function renderRevenueChart(orders) {
-    const successfulOrders = orders.filter(o => o.status !== 'cancel');
+function renderRevenueChart(successfulOrders) {
     const revenueByDate = {};
 
     successfulOrders.forEach(order => {
-        if(order.date) {
+        if (order.date) {
             const [y, m, d] = order.date.split('-');
             const displayDate = `${d}/${m}/${y}`;
-            if (!revenueByDate[displayDate]) revenueByDate[displayDate] = 0;
-            revenueByDate[displayDate] += (order.amount * (order.product?.price || 0));
+            revenueByDate[displayDate] = (revenueByDate[displayDate] || 0) + (order.amount * (order.product?.price || 0));
         }
     });
 
@@ -145,7 +160,7 @@ function renderRevenueChart(orders) {
                 tension: 0.4
             }]
         },
-        options: { scales: { y: { beginAtZero: true } } }
+        options: {scales: {y: {beginAtZero: true}}}
     });
 }
 
@@ -153,7 +168,7 @@ function renderCategoryChart() {
     const categoryCount = {};
 
     allProducts.forEach(prod => {
-        if(prod.category && prod.category.name) {
+        if (prod.category && prod.category.name) {
             categoryCount[prod.category.name] = (categoryCount[prod.category.name] || 0) + 1;
         }
     });
