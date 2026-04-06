@@ -11,23 +11,15 @@
 <body>
 
 <div class="container">
-  <aside class="sidebar">
-    <h2>ShopAdmin</h2>
-    <ul>
-      <li><i class="fas fa-home"></i><a href="../overviews/index.html">Tổng quan</a></li>
-      <li class="active"><i class="fas fa-box"></i><a href="../products/index.html">Sản phẩm</a></li>
-      <li><i class="fas fa-shopping-cart"></i><a href="../orders/index.html">Đơn hàng</a></li>
-      <li><i class="fas fa-users"></i><a href="../customers/index.html">Khách hàng</a> </li>
-      <li><i class="fas fa-chart-line"></i><a href="#">Báo cáo</a> </li>
-    </ul>
-  </aside>
+    <aside class="sidebar" id="sidebar">
+    </aside>
 
     <main class="main-content">
         <header>
             <h2>Báo cáo kinh doanh</h2>
             <div class="filter-group">
-                <input type="date" id="startDate" value="2026-01-01">
-                <input type="date" id="endDate" value="2026-01-31">
+                <input type="date" id="startDate">
+                <input type="date" id="endDate">
                 <button id="btnFilter"
                         style="padding: 8px 15px; background: var(--primary-color); color: white; border: none; border-radius: 5px; cursor: pointer;">
                     Lọc
@@ -35,197 +27,32 @@
             </div>
         </header>
 
-    <div class="stats-grid" id="reports-grid">
-    </div>
+        <div class="stats-grid" id="reports-grid">
+        </div>
 
-    <div class="charts-container">
-      <div class="chart-box">
-        <h3>Biểu đồ doanh thu 7 ngày gần nhất</h3>
-        <canvas id="revenueChart"></canvas>
-      </div>
-      <div class="chart-box">
-        <h3>Cơ cấu sản phẩm</h3>
-        <canvas id="categoryChart"></canvas>
-      </div>
-    </div>
+        <div class="charts-container">
+            <div class="chart-box">
+                <h3>Biểu đồ doanh thu</h3>
+                <canvas id="revenueChart"></canvas>
+            </div>
+            <div class="chart-box">
+                <h3>Cơ cấu sản phẩm</h3>
+                <canvas id="categoryChart"></canvas>
+            </div>
+        </div>
 
-    <div class="top-products">
-      <h3>Sản phẩm bán chạy nhất</h3>
-      <table id="topProductsTable">
-          <thead>
-          </thead>
-          <tbody>
-          </tbody>
-      </table>
-    </div>
-  </main>
+        <div class="top-products">
+            <h3>Sản phẩm bán chạy nhất</h3>
+            <table id="topProductsTable">
+                <thead>
+                </thead>
+                <tbody>
+                </tbody>
+            </table>
+        </div>
+    </main>
 </div>
 
-<script>
-    const apiClient = axios.create({
-      baseURL: 'https://k305jhbh09.execute-api.ap-southeast-1.amazonaws.com',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('accessToken') || ''}`
-      }
-    });
-
-    let revenueChartInstance = null;
-    let categoryChartInstance = null;
-
-    let globalOrders = [];
-    let globalCategories = [];
-    let globalProducts = [];
-    let globalCustomers = [];
-
-    async function loadReportData() {
-      try {
-        const [ordersRes, categoriesRes, productsRes, customersRes] = await Promise.all([
-          apiClient.get('/orders'),
-          apiClient.get('/categories'),
-          apiClient.get('/products'),
-          apiClient.get('/customers')
-        ]);
-
-        globalCategories = categoriesRes.data;
-        globalProducts = productsRes.data;
-        globalCustomers = customersRes.data;
-
-        const today = new Date();
-
-        globalOrders = ordersRes.data.map((order, index) => {
-          if (!order.date) {
-            const randomDaysAgo = index % 7;
-            const pastDate = new Date(today);
-            pastDate.setDate(today.getDate() - randomDaysAgo);
-
-            order.date = `${pastDate.getFullYear()}-${String(pastDate.getMonth() + 1).padStart(2, '0')}-${String(pastDate.getDate()).padStart(2, '0')}`;
-          }
-          return order;
-        });
-
-        const defaultStartDate = new Date(today);
-        defaultStartDate.setDate(today.getDate() - 6);
-
-        document.getElementById('startDate').value = defaultStartDate.toISOString().split('T')[0];
-        document.getElementById('endDate').value = today.toISOString().split('T')[0];
-
-        updateDashboard(globalOrders);
-
-      } catch (error) {
-        console.error("Lỗi khi tải dữ liệu báo cáo:", error);
-      }
-    }
-
-    function updateDashboard(ordersData) {
-      const successfulOrders = ordersData.filter(o => o.status === 'done');
-
-      const totalRevenue = successfulOrders.reduce((sum, order) => {
-        const price = (order.product && order.product.price) ? order.product.price : 0;
-        return sum + (order.amount * price);
-      }, 0);
-
-      const totalOrders = ordersData.length;
-      const totalProfit = totalRevenue * 0.25;
-      const newCustomers = globalCustomers.length;
-
-      const statValues = document.querySelectorAll('.stat-card .value');
-      statValues[0].innerText = new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(totalRevenue);
-      statValues[1].innerText = totalOrders;
-      statValues[2].innerText = new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(totalProfit);
-      statValues[3].innerText = newCustomers;
-
-      const revenueByDate = {};
-      successfulOrders.forEach(order => {
-        const [y, m, d] = order.date.split('-');
-        const displayDate = `${d}/${m}/${y}`;
-
-        if (!revenueByDate[displayDate]) revenueByDate[displayDate] = 0;
-        const price = (order.product && order.product.price) ? order.product.price : 0;
-        revenueByDate[displayDate] += (order.amount * price);
-      });
-
-      const chartLabels = Object.keys(revenueByDate).sort((a, b) => {
-        const [d1, m1, y1] = a.split('/');
-        const [d2, m2, y2] = b.split('/');
-        return new Date(y1, m1 - 1, d1) - new Date(y2, m2 - 1, d2);
-      });
-
-      const chartData = chartLabels.map(label => revenueByDate[label]);
-
-      drawRevenueChart(chartLabels.length ? chartLabels : ['Chưa có dữ liệu'], chartData.length ? chartData : [0]);
-
-      const categoryCount = {};
-      globalCategories.forEach(cat => categoryCount[cat.name] = 0);
-      globalProducts.forEach(prod => {
-        if(prod.category && prod.category.name) categoryCount[prod.category.name]++;
-      });
-      drawCategoryChart(Object.keys(categoryCount), Object.values(categoryCount));
-
-      renderTopProducts(successfulOrders);
-    }
-
-    document.getElementById('btnFilter').addEventListener('click', () => {
-      const start = document.getElementById('startDate').value;
-      const end = document.getElementById('endDate').value;
-
-      if (!start || !end) {
-        alert("Vui lòng chọn đầy đủ Từ ngày và Đến ngày!");
-        return;
-      }
-
-      const filteredOrders = globalOrders.filter(order => {
-        return order.date >= start && order.date <= end;
-      });
-
-      updateDashboard(filteredOrders);
-    });
-
-    function renderTopProducts(successfulOrders) {
-      const productSales = {};
-      successfulOrders.forEach(order => {
-        if (order.product) {
-          const pId = order.product.id;
-          if (!productSales[pId]) {
-            productSales[pId] = { name: order.product.name, quantity: 0, revenue: 0, remaining: order.product.remaining };
-          }
-          productSales[pId].quantity += order.amount;
-          productSales[pId].revenue += (order.amount * order.product.price);
-        }
-      });
-
-      const topProductsArray = Object.values(productSales).sort((a, b) => b.quantity - a.quantity).slice(0, 5);
-      const tbody = document.querySelector('.top-products tbody');
-      tbody.innerHTML = '';
-
-      topProductsArray.forEach(p => {
-        const statusHtml = p.remaining > 0 ? `<span style="color: var(--success)">Còn hàng (${p.remaining})</span>` : `<span style="color: var(--danger)">Hết hàng</span>`;
-        const formattedRevenue = new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(p.revenue);
-        tbody.innerHTML += `<tr><td>${p.name}</td><td>${p.quantity}</td><td>${formattedRevenue}</td><td>${statusHtml}</td></tr>`;
-      });
-    }
-
-    function drawRevenueChart(labels, data) {
-      const ctx = document.getElementById('revenueChart').getContext('2d');
-      if (revenueChartInstance) revenueChartInstance.destroy();
-      revenueChartInstance = new Chart(ctx, {
-        type: 'line',
-        data: { labels: labels, datasets: [{ label: 'Doanh thu (VNĐ)', data: data, borderColor: '#3498db', backgroundColor: 'rgba(52, 152, 219, 0.1)', fill: true, tension: 0.4 }] },
-        options: { scales: { y: { beginAtZero: true } } }
-      });
-    }
-
-    function drawCategoryChart(labels, data) {
-      const ctx = document.getElementById('categoryChart').getContext('2d');
-      if (categoryChartInstance) categoryChartInstance.destroy();
-      categoryChartInstance = new Chart(ctx, {
-        type: 'doughnut',
-        data: { labels: labels, datasets: [{ data: data, backgroundColor: ['#3498db', '#2ecc71', '#f1c40f', '#e74c3c', '#9b59b6'] }] }
-      });
-    }
-
-    window.addEventListener('DOMContentLoaded', loadReportData);
-</script>
 <script type="module" src="../static/js/reports.js"></script>
 </body>
 </html>
