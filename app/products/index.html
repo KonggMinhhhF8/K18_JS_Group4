@@ -47,18 +47,40 @@
     </main>
 </div>
 
+<!--<div id="productModal" class="modal" style="display: none">-->
+<!--    <div class="modal-content">-->
+<!--        <h3>Thêm sản phẩm mới</h3>-->
+<!--        <form id="productForm">-->
+<!--            <label for="inputName"></label><input type="text" id="inputName" placeholder="Tên sản phẩm" required>-->
+<!--            <label for="inputSku"></label><input type="text" id="inputSku" placeholder="Mã SKU" required>-->
+<!--            <label for="inputPrice"></label><input type="text" id="inputPrice" placeholder="Giá bán" required>-->
+<!--            <label for="inputStock"></label><input type="number" id="inputStock" placeholder="Số lượng tồn kho" required>-->
+<!--            <label for="inputCategory"></label>-->
+<!--            <select id="inputCategory">-->
+<!--                <option value="">&#45;&#45; Đang tải danh mục... &#45;&#45;</option>-->
+<!--            </select>-->
+<!--            <div class="modal-buttons">-->
+<!--                <button type="button" class="btn-cancel">Hủy</button>-->
+<!--                <button type="submit" class="btn-add" id="btnSaveProduct">Lưu sản phẩm</button>-->
+<!--            </div>-->
+<!--        </form>-->
+<!--    </div>-->
+<!--</div>-->
 <div id="productModal" class="modal" style="display: none">
     <div class="modal-content">
-        <h3>Thêm sản phẩm mới</h3>
+        <h3 id="modalTitle">Thêm sản phẩm mới</h3>
         <form id="productForm">
-            <label for="inputName"></label><input type="text" id="inputName" placeholder="Tên sản phẩm" required>
-            <label for="inputSku"></label><input type="text" id="inputSku" placeholder="Mã SKU" required>
-            <label for="inputPrice"></label><input type="text" id="inputPrice" placeholder="Giá bán" required>
-            <label for="inputStock"></label><input type="number" id="inputStock" placeholder="Số lượng tồn kho" required>
-            <label for="inputCategory"></label>
-            <select id="inputCategory">
-                <option value="">-- Đang tải danh mục... --</option>
+            <input type="hidden" id="inputId">
+
+            <input type="text" id="inputName" placeholder="Tên sản phẩm" required>
+            <input type="text" id="inputSku" placeholder="Mã SKU" required>
+            <input type="number" id="inputPrice" placeholder="Giá bán" required>
+            <input type="number" id="inputStock" placeholder="Số lượng tồn kho" required>
+
+            <select id="inputCategory" required>
+                <option value="">-- Chọn danh mục --</option>
             </select>
+
             <div class="modal-buttons">
                 <button type="button" class="btn-cancel">Hủy</button>
                 <button type="submit" class="btn-add" id="btnSaveProduct">Lưu sản phẩm</button>
@@ -66,6 +88,7 @@
         </form>
     </div>
 </div>
+
 <script type="module" src="../static/js/products.js"></script>
 </body>
 </html>
