@@ -17,6 +17,7 @@ let editingId = null;
 const dialog = document.getElementById("customer-modal-overlay");
 const dialogTitle = document.getElementById("dialog-title");
 
+// Input form
 const inputName = document.getElementById("inp-name");
 const inputEmail = document.getElementById("inp-email");
 const inputPhone = document.getElementById("inp-phone");
