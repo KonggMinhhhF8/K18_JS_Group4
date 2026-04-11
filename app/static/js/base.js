@@ -206,6 +206,7 @@ export const renderSidebar = (currentPageName) => {
     sidebarMenuE.append(ulE);
 };
 
+
 export const setupSearch = (inputId, data, fields, callback) => {
     const searchInput = document.getElementById(inputId);
     if (!searchInput) return;
