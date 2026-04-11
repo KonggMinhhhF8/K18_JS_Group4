@@ -1,59 +1,123 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="vi">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quản Lý Khách Hàng | ShopAdmin</title>
-    <link rel="stylesheet" href="../static/css/customers.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-</head>
-<body>
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Quản Lý Khách Hàng | ShopAdmin</title>
+        <link rel="stylesheet" href="../static/css/customers.css" />
+        <link
+            rel="stylesheet"
+            href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+        />
+    </head>
+    <body>
+        <div id="customer-modal-overlay" class="modal" style="display: none">
+            <div class="modal-content">
+                <h3 id="dialog-title">Thêm khách hàng</h3>
+                <div id="customerForm">
+                    <input
+                        type="text"
+                        id="inp-name"
+                        placeholder="Tên khách hàng"
+                    />
+                    <input type="email" id="inp-email" placeholder="Email" />
+                    <input
+                        type="text"
+                        id="inp-phone"
+                        placeholder="Số điện thoại"
+                    />
+                    <input type="text" id="inp-address" placeholder="Địa chỉ" />
+                    <select id="inp-rank">
+                        <option value="BRONZE">-- Chọn hạng --</option>
+                        <option value="BRONZE">Đồng</option>
+                        <option value="SILVER">Bạc</option>
+                        <option value="GOLD">Vàng</option>
+                    </select>
+                    <div class="modal-buttons">
+                        <button
+                            type="button"
+                            id="btn-cancel"
+                            class="btn-cancel"
+                        >
+                            Hủy
+                        </button>
+                        <button type="button" id="btn-submit" class="btn-add">
+                            Lưu khách hàng
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-<div class="container">
-  <aside class="sidebar">
-    <h2>ShopAdmin</h2>
-      <ul>
-          <li><i class="fas fa-home"></i><a href="../overviews/index.html">Tổng quan</a></li>
-          <li><i class="fas fa-box"></i><a href="../products/index.html">Sản phẩm</a></li>
-          <li><i class="fas fa-shopping-cart"></i><a href="../orders/index.html">Đơn hàng</a> </li>
-          <li class="active"><i class="fas fa-users"></i><a href="#">Khách hàng</a> </li>
-          <li><i class="fas fa-chart-line"></i><a href="../reports/index.html">Báo cáo</a></li>
-      </ul>
-  </aside>
+        <div class="container">
+            <aside class="sidebar">
+                <h2>ShopAdmin</h2>
+                <ul>
+                    <li>
+                        <i class="fas fa-home"></i
+                        ><a href="../overviews/index.html">Tổng quan</a>
+                    </li>
+                    <li>
+                        <i class="fas fa-box"></i
+                        ><a href="../products/index.html">Sản phẩm</a>
+                    </li>
+                    <li>
+                        <i class="fas fa-shopping-cart"></i
+                        ><a href="../orders/index.html">Đơn hàng</a>
+                    </li>
+                    <li class="active">
+                        <i class="fas fa-users"></i><a href="#">Khách hàng</a>
+                    </li>
+                    <li>
+                        <i class="fas fa-chart-line"></i
+                        ><a href="../reports/index.html">Báo cáo</a>
+                    </li>
+                </ul>
+            </aside>
 
-  <main class="main-content">
-    <header>
-      <div class="search-bar">
-          <label>
-              <input type="text" placeholder="Tìm tên, email hoặc số điện thoại...">
-          </label>
-      </div>
-      <button class="btn-add"><i class="fas fa-user-plus"></i> Thêm khách hàng</button>
-    </header>
+            <main class="main-content">
+                <header>
+                    <div class="search-bar">
+                        <label>
+                            <input
+                                type="text"
+                                placeholder="Tìm tên, email hoặc số điện thoại..."
+                            />
+                        </label>
+                    </div>
+                    <button class="btn-add">
+                        <i class="fas fa-user-plus"></i> Thêm khách hàng
+                    </button>
+                </header>
 
-    <section class="stats" id ="customer-stats">
-    </section>
+                <section class="stats" id="customer-stats"></section>
 
-    <section class="table-container">
-      <div class="table-header">
-        <h3>Danh sách khách hàng</h3>
-          <label>
-              <select style="padding: 8px; border-radius: 5px; border: 1px solid #ddd;">
-                <option>Hạng: Tất cả</option>
-                <option>Hạng: Vàng</option>
-                <option>Hạng: Bạc</option>
-              </select>
-          </label>
-      </div>
-      <table id="customerTable">
-        <thead>
-        </thead>
-        <tbody>
-        </tbody>
-      </table>
-    </section>
-  </main>
-</div>
-<script type="module" src="../static/js/customers.js"></script>
-</body>
+                <section class="table-container">
+                    <div class="table-header">
+                        <h3>Danh sách khách hàng</h3>
+                        <label>
+                            <select
+                                style="
+                                    padding: 8px;
+                                    border-radius: 5px;
+                                    border: 1px solid #ddd;
+                                "
+                            >
+                                <option>Hạng: Tất cả</option>
+                                <option>Hạng: Đồng</option>
+                                <option>Hạng: Bạc</option>
+                                <option>Hạng: Vàng</option>
+                            </select>
+                        </label>
+                    </div>
+                    <table id="customerTable">
+                        <thead></thead>
+                        <tbody></tbody>
+                    </table>
+                </section>
+            </main>
+        </div>
+
+        <script type="module" src="../static/js/customers.js"></script>
+    </body>
 </html>
